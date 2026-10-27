@@ -12,3 +12,7 @@ vitest-results.json
 .zcode/
 .codebuddy/
 generated-images/
+
+# Local release archives and interface-review evidence
+.release/
+.taste-skill/

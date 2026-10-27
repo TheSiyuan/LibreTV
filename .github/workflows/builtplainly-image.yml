@@ -1,0 +1,153 @@
+name: BuiltPlainly application image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/english-chinese]
+    paths:
+      - src/**
+      - public/**
+      - package.json
+      - package-lock.json
+      - Dockerfile
+      - .dockerignore
+      - next.config.*
+      - tsconfig.json
+      - tailwind.config.*
+      - postcss.config.*
+      - .github/workflows/builtplainly-image.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: builtplainly-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test -- --testTimeout=20000
+
+      - name: Build the exact application revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          docker build --platform linux/amd64 \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.version=${version}" \
+            --label "com.builtplainly.upstream.revision=29cbeb3d37b4876f909a0354087a3531af0447f6" \
+            --tag "builtplainly/libretv:${GITHUB_SHA}" .
+
+      - name: Check the image under the staging resource and filesystem limits
+        shell: bash
+        run: |
+          set -euo pipefail
+          image_id=$(docker image inspect --format '{{.Id}}' "builtplainly/libretv:${GITHUB_SHA}")
+          smoke_file="$RUNNER_TEMP/libretv-smoke.yaml"
+          cat > "$smoke_file" <<YAML
+          services:
+            libretv:
+              image: $image_id
+              network_mode: none
+              mem_limit: 256m
+              memswap_limit: 256m
+              mem_reservation: 96m
+              cpus: 0.35
+              pids_limit: 128
+              read_only: true
+              cap_drop: [ALL]
+              security_opt: [no-new-privileges:true]
+              tmpfs:
+                - /tmp:size=16m,mode=1777,noexec,nosuid
+                - /app/.next/cache:size=16m,mode=1777,noexec,nosuid
+              environment:
+                PASSWORD: ci-only-placeholder-password-123456789
+                PROXY_SECRET: ci-only-placeholder-signing-key-123456789
+                COOKIE_SECURE: "true"
+                NODE_OPTIONS: --max-old-space-size=128
+          YAML
+          trap 'docker compose -p libretv-artifact-check -f "$smoke_file" down >/dev/null' EXIT
+          docker compose -p libretv-artifact-check -f "$smoke_file" up -d --pull never
+          container=$(docker compose -p libretv-artifact-check -f "$smoke_file" ps -q libretv)
+          test "$(docker inspect --format '{{.Image}}' "$container")" = "$image_id"
+          version=$(node -p "require('./package.json').version")
+          ready=0
+          for attempt in $(seq 1 90); do
+            if docker exec -e EXPECTED_VERSION="$version" "$container" node -e '
+              require("http").get("http://127.0.0.1:8080/api/status", r => {
+                let body = "";
+                r.on("data", part => body += part);
+                r.on("end", () => {
+                  try {
+                    const value = JSON.parse(body);
+                    const ok = r.statusCode === 200 && value.version === process.env.EXPECTED_VERSION &&
+                      value.passwordRequired && !value.verified &&
+                      ["defaultSources", "defaultLiveSources", "defaultSubscriptions"].every(key =>
+                        Array.isArray(value[key]) && value[key].length === 0);
+                    process.exit(ok ? 0 : 1);
+                  } catch { process.exit(1); }
+                });
+              }).on("error", () => process.exit(1));
+            '; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" -eq 1
+          test "$(docker inspect --format '{{.State.OOMKilled}}' "$container")" = false
+          test "$(docker inspect --format '{{.RestartCount}}' "$container")" = 0
+          test "$(docker inspect --format '{{.State.Running}}' "$container")" = true
+
+      - name: Save the immutable image and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir release
+          docker save "builtplainly/libretv:${GITHUB_SHA}" | gzip -1 > release/image.tar.gz
+          docker image inspect "builtplainly/libretv:${GITHUB_SHA}" > "$RUNNER_TEMP/libretv-image.json"
+          node <<'NODE'
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const image = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/libretv-image.json', 'utf8'))[0];
+          const version = require('./package.json').version;
+          const metadata = {
+            image_id: image.Id,
+            archive_sha256: crypto.createHash('sha256').update(fs.readFileSync('release/image.tar.gz')).digest('hex'),
+            source_commit: process.env.GITHUB_SHA,
+            version,
+            platform: `${image.Os}/${image.Architecture}`,
+            repository: `https://github.com/${process.env.GITHUB_REPOSITORY}`,
+            upstream_source_commit: '29cbeb3d37b4876f909a0354087a3531af0447f6',
+            workflow_run: `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+          };
+          if (!/^sha256:[0-9a-f]{64}$/.test(metadata.image_id) || metadata.platform !== 'linux/amd64') {
+            throw new Error('Unexpected image identity or platform');
+          }
+          fs.writeFileSync('release/metadata.json', JSON.stringify(metadata, null, 2) + '\n');
+          fs.writeFileSync('release/SHA256SUMS', `${metadata.archive_sha256}  image.tar.gz\n`);
+          console.log(JSON.stringify(metadata, null, 2));
+          NODE
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libretv-linux-amd64-${{ github.sha }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as tr } from '@/lib/i18n';
+
 import { useEffect, useRef, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +32,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  useI18n();
   const confirmRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
@@ -66,14 +70,14 @@ export function ConfirmDialog({
       <div
         role="alertdialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={tr(title)}
         className="relative bg-surface-raised rounded-xl w-full max-w-sm shadow-2xl p-5 animate-slide-up"
       >
-        <h2 className="text-base font-semibold text-content mb-2">{title}</h2>
-        {message && <div className="text-sm text-muted leading-relaxed">{message}</div>}
+        <h2 className="text-base font-semibold text-content mb-2">{tr(title)}</h2>
+        {message && <div className="text-sm text-muted leading-relaxed">{typeof message === 'string' ? tr(message) : message}</div>}
         <div className="flex gap-2 justify-end mt-5">
           <button ref={cancelRef} className="btn-ghost text-sm" onClick={onCancel}>
-            {cancelLabel}
+            {tr(cancelLabel)}
           </button>
           <button
             ref={confirmRef}
@@ -83,7 +87,7 @@ export function ConfirmDialog({
             )}
             onClick={onConfirm}
           >
-            {confirmLabel}
+            {tr(confirmLabel)}
           </button>
         </div>
       </div>

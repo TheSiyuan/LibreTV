@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n, LocaleSwitch } from '@/components/locale';
+import { translate as tr } from '@/lib/i18n';
+
 import Link from 'next/link';
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -13,6 +16,7 @@ import { cn } from '@/lib/utils';
 
 /** 顶部导航：Logo、搜索框（首页外）、历史、设置 */
 export function Header({ showSearch = false }: { showSearch?: boolean }) {
+  useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -38,8 +42,8 @@ export function Header({ showSearch = false }: { showSearch?: boolean }) {
   return (
     <>
       <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur border-b border-line">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Link href="/" aria-label="LibreTV 首页" className="flex items-center shrink-0">
+        <div className="max-w-6xl mx-auto px-4 min-h-14 py-1 flex items-center gap-1 sm:gap-3">
+          <Link href="/" aria-label={tr('LibreTV 首页')} className="flex items-center shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icons/icon-512.png" alt="LibreTV" className="w-7 h-7 rounded-lg" />
           </Link>
@@ -60,8 +64,8 @@ export function Header({ showSearch = false }: { showSearch?: boolean }) {
                     searchHistory.visible &&
                       'rounded-b-none border-accent border-b-line bg-surface-raised focus-visible:ring-0'
                   )}
-                  aria-label="搜索影片"
-                  placeholder="搜索影片..."
+                  aria-label={tr('搜索影片')}
+                  placeholder={tr('搜索影片...')}
                   value={query}
                   maxLength={100}
                   onChange={(e) => {
@@ -94,23 +98,22 @@ export function Header({ showSearch = false }: { showSearch?: boolean }) {
             </form>
           )}
 
-          <div className="flex-1 sm:hidden" />
-
-          <nav className="flex items-center gap-1 ml-auto">
+          <nav className="flex min-w-0 flex-wrap sm:flex-nowrap items-center justify-end gap-1 ml-auto">
             <HeaderLink href="/live" active={pathname === '/live'}>
-              直播
+              {tr('直播')}
             </HeaderLink>
             <HeaderLink href="/about" active={pathname === '/about'}>
-              关于
+              {tr('关于')}
             </HeaderLink>
+            <LocaleSwitch />
             <ThemeToggle />
-            <IconButton label="观看历史" onClick={() => setHistoryOpen(true)}>
+            <IconButton label={tr('观看历史')} onClick={() => setHistoryOpen(true)}>
               <Icon name="clock" />
             </IconButton>
-            <IconButton label="下载管理" onClick={requestShowDownloadManager}>
+            <IconButton label={tr('下载管理')} onClick={requestShowDownloadManager}>
               <Icon name="download" />
             </IconButton>
-            <IconButton label="设置" onClick={() => setSettingsOpen(true)}>
+            <IconButton label={tr('设置')} onClick={() => setSettingsOpen(true)}>
               <Icon name="gear" />
             </IconButton>
           </nav>

@@ -1,5 +1,10 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as t } from '@/lib/i18n';
+import { syncArtplayerLocale } from '@/lib/i18n-player';
+import { PlayerPoster } from './player-poster';
+
 import { useEffect, useRef, useState } from 'react';
 import Artplayer from 'artplayer';
 import Hls, { type HlsConfig } from 'hls.js';
@@ -124,6 +129,7 @@ export function PlayerShell({
   hasPrevEpisode,
   hasNextEpisode,
 }: PlayerShellProps) {
+  const { locale } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const artRef = useRef<any>(null);
@@ -271,7 +277,7 @@ export function PlayerShell({
     for (const seg of segments) {
       const el = document.createElement('div');
       el.dataset.skipSegment = '1';
-      el.title = `跳过${SEGMENT_LABELS[seg.type]}`;
+      el.title = t('跳过{segment}', { segment: t(SEGMENT_LABELS[seg.type]) });
       const left = (seg.start / duration) * 100;
       const width = Math.max(0.4, ((seg.end - seg.start) / duration) * 100);
       el.style.cssText = `position:absolute;left:${left}%;width:${width}%;top:0;bottom:0;background:${SEGMENT_COLORS[seg.type]};pointer-events:none;`;
@@ -531,7 +537,7 @@ export function PlayerShell({
       airplay: true,
       hotkey: false,
       theme: '#2563eb',
-      lang: navigator.language.toLowerCase().startsWith('zh') ? 'zh-cn' : 'en',
+      lang: locale === 'zh-CN' ? 'zh-cn' : 'en',
       moreVideoAttr: { crossOrigin: 'anonymous', playsInline: true },
       // 上/下集放在播放键右侧：换集是看剧最高频的动作，不该让用户滚回页面下方找按钮
       controls: [
@@ -540,7 +546,7 @@ export function PlayerShell({
           index: 11,
           position: 'left',
           html: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z"/></svg>',
-          tooltip: '上一集 (Alt+←)',
+          tooltip: t('上一集 (Alt+←)'),
           click: () => {
             if (propsRef.current.hasPrevEpisode) propsRef.current.onPrevEpisode?.();
           },
@@ -550,7 +556,7 @@ export function PlayerShell({
           index: 12,
           position: 'left',
           html: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>',
-          tooltip: '下一集 (Alt+→)',
+          tooltip: t('下一集 (Alt+→)'),
           click: () => {
             if (propsRef.current.hasNextEpisode) propsRef.current.onNextEpisode?.();
           },
@@ -941,6 +947,16 @@ export function PlayerShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Change only player chrome; locale changes must not reload media or reset progress.
+  useEffect(() => {
+    const art = artRef.current;
+    if (!art) return;
+    syncArtplayerLocale(art, locale);
+    art.controls.update({ name: 'prev-episode', tooltip: t('上一集 (Alt+←)') });
+    art.controls.update({ name: 'next-episode', tooltip: t('下一集 (Alt+→)') });
+    renderSkipMarks();
+  }, [locale]);
+
   // —— 上/下集禁用态：走 ArtPlayer 的 controls API 更新样式，不直接改 DOM ——
   // 直接 querySelector 改 style 在控件重建（切全屏/播放器重绘）后不会恢复，且依赖内部 class 名。
   useEffect(() => {
@@ -996,17 +1012,7 @@ export function PlayerShell({
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full" style={{ WebkitTouchCallout: 'none' }} />
-      {showPoster && !error && (
-        <div
-          className="absolute inset-0 bg-black pointer-events-none"
-          style={{
-            backgroundImage: 'url(/player-poster.png)',
-            backgroundSize: 'contain',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-          }}
-        />
-      )}
+      {showPoster && !error && <PlayerPoster />}
       {!error && skipPrompt && (
         <button
           type="button"
@@ -1026,17 +1032,17 @@ export function PlayerShell({
           }}
         >
           {skipPrompt.type === 'ending'
-            ? '跳过片尾'
+            ? t('跳过片尾')
             : skipPrompt.type === 'opening'
-              ? '跳过片头'
-              : '跳过中段'}
+              ? t('跳过片头')
+              : t('跳过中段')}
         </button>
       )}
       {error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/80">
-          <p className="text-danger text-sm">{error}</p>
+          <p className="text-danger text-sm">{t(error)}</p>
           <button className="btn-ghost text-xs" onClick={() => location.reload()}>
-            重新加载
+            {t('重新加载')}
           </button>
         </div>
       )}
@@ -1044,7 +1050,7 @@ export function PlayerShell({
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1.5 text-sm text-white animate-fade-in">
           {/* 撤销窗口比普通提示长：hint 已淡出时仍要让用户知道刚才跳过了什么 */}
           <span className="pointer-events-none">
-            {hint || (undoSkip ? `已跳过${SEGMENT_LABELS[undoSkip.segment.type]}` : '')}
+            {hint ? t(hint) : undoSkip ? t('已跳过{segment}', { segment: t(SEGMENT_LABELS[undoSkip.segment.type]) }) : ''}
           </span>
           {undoSkip && (
             <button
@@ -1052,14 +1058,14 @@ export function PlayerShell({
               className="pointer-events-auto shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium transition-colors hover:bg-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               onClick={undoLastSkip}
             >
-              撤销
+              {t('撤销')}
             </button>
           )}
         </div>
       )}
-      {autoplayNext && !error && (
+      {autoplayNext && !error && !showPoster && (
         <div className="absolute bottom-16 right-3 text-[10px] text-muted bg-black/50 px-2 py-0.5 rounded pointer-events-none">
-          自动连播已开启
+          {t('自动连播已开启')}
         </div>
       )}
     </div>

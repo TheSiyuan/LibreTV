@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as tr } from '@/lib/i18n';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Drawer } from './drawer';
 import { ConfirmDialog } from './confirm-dialog';
@@ -65,6 +68,7 @@ const SECONDARY_TABS: Record<PrimaryTab, { id: SecondaryTab; label: string }[]> 
 const TAB_STORAGE_KEY = 'libretv-settings-tab';
 
 export function SourceManagerDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useI18n();
   const [primary, setPrimary] = useState<PrimaryTab>('sources');
   const [secondary, setSecondary] = useState<Record<PrimaryTab, SecondaryTab>>({
     sources: 'vod',
@@ -113,11 +117,11 @@ export function SourceManagerDrawer({ open, onClose }: { open: boolean; onClose:
     <Drawer
       open={open}
       onClose={onClose}
-      title="设置"
+      title={tr("设置")}
       resetScrollKey={current}
       subheader={
         <div className="space-y-2">
-          <TabRow tabs={PRIMARY_TABS} value={primary} onChange={setPrimary} variant="primary" ariaLabel="设置分类" />
+          <TabRow tabs={PRIMARY_TABS} value={primary} onChange={setPrimary} variant="primary" ariaLabel={tr("设置分类")} />
           {/* 分组下只有一项时无需二级导航，直接展示该面板 */}
           {SECONDARY_TABS[primary].length > 1 && (
             <TabRow
@@ -125,7 +129,7 @@ export function SourceManagerDrawer({ open, onClose }: { open: boolean; onClose:
               value={current}
               onChange={(id) => setSecondary((prev) => ({ ...prev, [primary]: id }))}
               variant="secondary"
-              ariaLabel="设置项"
+              ariaLabel={tr("设置项")}
             />
           )}
         </div>
@@ -156,6 +160,7 @@ function TabRow<T extends string>({
   variant: 'primary' | 'secondary';
   ariaLabel: string;
 }) {
+  useI18n();
   const move = (dir: 1 | -1) => {
     const idx = tabs.findIndex((t) => t.id === value);
     onChange(tabs[(idx + dir + tabs.length) % tabs.length].id);
@@ -198,7 +203,7 @@ function TabRow<T extends string>({
             onClick={() => onChange(t.id)}
           >
             {t.icon && <Icon name={t.icon} className="w-3.5 h-3.5" />}
-            {t.label}
+            {tr(t.label)}
           </button>
         );
       })}
@@ -220,6 +225,7 @@ const VOD_FILTERS: { id: VodFilter; label: string }[] = [
 ];
 
 function VodSourcesPanel() {
+  useI18n();
   const store = useAppStore();
   const { toast } = useToast();
   const [editing, setEditing] = useState<string | null>(null);
@@ -258,7 +264,7 @@ function VodSourcesPanel() {
     const eligible = filtered.filter((s) => !(s.isAdult && store.yellowFilter)).map((s) => s.key);
     const skipped = filtered.length - eligible.length;
     store.setSelectedKeys([...new Set([...store.selectedKeys, ...eligible])]);
-    if (skipped > 0) toast(`已启用 ${eligible.length} 个；${skipped} 个成人源因过滤开启被跳过`, 'info');
+    if (skipped > 0) toast(tr("已启用 {count} 个；{skipped} 个成人源因过滤开启被跳过", { count: eligible.length, skipped: skipped }), 'info');
   };
 
   const runAll = async () => {
@@ -268,7 +274,7 @@ function VodSourcesPanel() {
     }
     const result = await probe(filtered.map((s) => ({ key: s.key, url: s.url })));
     if (!result) return; // 被取消则无汇总
-    toast(`测活完成：${result.ok}/${result.total} 个可用`, result.ok === result.total ? 'success' : 'info');
+    toast(tr("测活完成：{ok}/{total} 个可用", { ok: result.ok, total: result.total }), result.ok === result.total ? 'success' : 'info');
   };
 
   /** 一键恢复被自动停用的源（仅「已停用」筛选下提供） */
@@ -276,7 +282,7 @@ function VodSourcesPanel() {
     const keys = filtered.filter((s) => isSourceDisabled(store, s.key)).map((s) => s.key);
     if (keys.length === 0) return;
     keys.forEach((k) => useAppStore.getState().clearSourceHealth(k));
-    toast(`已恢复 ${keys.length} 个源`, 'success');
+    toast(tr("已恢复 {count} 个源", { count: keys.length }), 'success');
   };
 
   const empty = store.envSources.length === 0 && store.customAPIs.length === 0;
@@ -284,13 +290,11 @@ function VodSourcesPanel() {
   return (
     <section>
       <SectionTitle
-        title="点播源"
-        hint={empty ? undefined : `共 ${all.length} 个 · 已启用 ${all.filter((s) => store.selectedKeys.includes(s.key)).length}`}
+        title={tr("点播源")}
+        hint={empty ? undefined : tr("共 {count} 个 · 已启用 {enabled}", { count: all.length, enabled: all.filter((s) => store.selectedKeys.includes(s.key)).length })}
         extra={
           <button className="btn-primary btn-sm" onClick={() => setEditing('__new__')}>
-            <Icon name="plus" className="w-3.5 h-3.5" />
-            添加 API
-          </button>
+            <Icon name="plus" className="w-3.5 h-3.5" />{tr("添加 API")}</button>
         }
       />
 
@@ -306,18 +310,16 @@ function VodSourcesPanel() {
       {empty && editing !== '__new__' ? (
         <EmptyState
           icon="link"
-          title="还没有添加任何点播源"
-          description="添加一个 Apple CMS 采集站 API 即可开始搜索影片；也可到「数据源订阅」一次导入点播源与直播源"
+          title={tr("还没有添加任何点播源")}
+          description={tr("添加一个 Apple CMS 采集站 API 即可开始搜索影片；也可到「数据源订阅」一次导入点播源与直播源")}
           action={
-            <button className="btn-primary btn-sm" onClick={() => setEditing('__new__')}>
-              添加第一个点播源
-            </button>
+            <button className="btn-primary btn-sm" onClick={() => setEditing('__new__')}>{tr("添加第一个点播源")}</button>
           }
         />
       ) : (
         <>
           <div className="space-y-2 mb-3">
-            <SearchInput value={query} onChange={setQuery} placeholder="搜索名称或地址" />
+            <SearchInput value={query} onChange={setQuery} placeholder={tr("搜索名称或地址")} />
             <div className="flex flex-wrap items-center gap-1">
               {VOD_FILTERS.map((f) => (
                 <button
@@ -329,27 +331,25 @@ function VodSourcesPanel() {
                   onClick={() => setFilter(f.id)}
                   aria-pressed={filter === f.id}
                 >
-                  {f.label}
+                  {tr(f.label)}
                 </button>
               ))}
-              <span className="ml-auto text-[11px] text-faint">显示 {filtered.length} 个</span>
+              <span className="ml-auto text-[11px] text-faint">{tr("显示 {count} 个", { count: filtered.length })}</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button className="btn-ghost btn-sm" onClick={toggleAll} disabled={filtered.length === 0}>
-                {allSelected ? '全部停用' : '全部启用'}
+                {allSelected ? tr('全部停用') : tr('全部启用')}
               </button>
               <button
                 className="btn-ghost btn-sm"
                 onClick={runAll}
                 disabled={filtered.length === 0}
               >
-                {isProbing ? '取消测活' : '批量测活'}
+                {isProbing ? tr('取消测活') : tr('批量测活')}
               </button>
               {/* 查看「已停用」时提供一键恢复，省去逐个点击 */}
               {filter === 'disabled' && (
-                <button className="btn-ghost btn-sm" onClick={restoreAll} disabled={filtered.length === 0}>
-                  全部恢复
-                </button>
+                <button className="btn-ghost btn-sm" onClick={restoreAll} disabled={filtered.length === 0}>{tr("全部恢复")}</button>
               )}
             </div>
             {progress && (
@@ -361,18 +361,16 @@ function VodSourcesPanel() {
                   />
                 </div>
                 <span className="tabular-nums shrink-0">
-                  {progress.done}/{progress.total} · 可用 {progress.ok}
+                  {tr("{done}/{total} · 可用 {ok}", { done: progress.done, total: progress.total, ok: progress.ok })}
                   {formatEta(progress.done, progress.total, progress.startedAt)}
                 </span>
-                <button className="btn-ghost btn-sm shrink-0" onClick={cancel}>
-                  取消
-                </button>
+                <button className="btn-ghost btn-sm shrink-0" onClick={cancel}>{tr("取消")}</button>
               </div>
             )}
           </div>
 
           {filtered.length === 0 ? (
-            <EmptyState variant="plain" title="没有符合条件的源" />
+            <EmptyState variant="plain" title={tr("没有符合条件的源")} />
           ) : (
             <ul className="space-y-2">
               {filtered.map((source) => (
@@ -412,7 +410,7 @@ function formatEta(done: number, total: number, startedAt: number): string {
   if (done <= 0 || done >= total) return '';
   const elapsed = Date.now() - startedAt;
   const remainSec = Math.max(0, Math.round((elapsed / done) * (total - done) / 1000));
-  return remainSec > 0 ? ` · 约 ${remainSec}s` : '';
+  return remainSec > 0 ? tr(" · 约 {seconds}s", { seconds: remainSec }) : '';
 }
 
 /** 单条点播源行：勾选 / 名称标签 / 健康度 / 探活 / 编辑删除（订阅源与预置源按来源限制操作） */
@@ -435,6 +433,7 @@ function VodSourceRow({
   testState?: TestState;
   onTest: () => void;
 }) {
+  useI18n();
   const selected = useAppStore((s) => s.selectedKeys.includes(api.key));
   const yellowFilter = useAppStore((s) => s.yellowFilter);
   const toast = useToast().toast;
@@ -445,12 +444,12 @@ function VodSourceRow({
     const snapshot = useAppStore.getState().removeCustomApi(api.key);
     if (!snapshot) return;
     // 轻操作：不做确认弹窗，给 6 秒撤销窗口
-    toast(`已移除「${api.name}」`, 'info', {
+    toast(tr("已移除「{name}」", { name: api.name }), 'info', {
       action: {
-        label: '撤销',
+        label: tr('撤销'),
         onClick: () => {
           const ok = useAppStore.getState().restoreCustomApi(snapshot);
-          toast(ok ? '已恢复' : '恢复失败：该源位置已被重新占用', ok ? 'success' : 'warning');
+          toast(ok ? tr('已恢复') : tr('恢复失败：该源位置已被重新占用'), ok ? 'success' : 'warning');
         },
       },
     });
@@ -479,25 +478,21 @@ function VodSourceRow({
           checked={selected}
           onChange={() => useAppStore.getState().toggleSourceSelected(api.key)}
           disabled={adultBlocked}
-          title={adultBlocked ? '成人内容过滤开启中，需先关闭过滤才能启用此源' : undefined}
-          aria-label={`选择 ${api.name}`}
+          title={adultBlocked ? tr('成人内容过滤开启中，需先关闭过滤才能启用此源') : undefined}
+          aria-label={tr("选择 {name}", { name: api.name })}
         />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-content truncate">
             {api.name}
             {api.isAdult && <span className="text-pink-400 text-xs ml-1">(18+)</span>}
             {isEnv && (
-              <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-chip text-faint align-middle">
-                部署者预置
-              </span>
+              <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-chip text-faint align-middle">{tr("部署者预置")}</span>
             )}
             {fromSubscription && (
               <span
                 className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent align-middle"
-                title="来自数据源订阅，重新同步时此源的名称/地址会以订阅内容为准"
-              >
-                订阅
-              </span>
+                title={tr("来自数据源订阅，重新同步时此源的名称/地址会以订阅内容为准")}
+              >{tr("来自订阅")}</span>
             )}
           </div>
           <div className="text-xs text-faint truncate">{api.url}</div>
@@ -506,7 +501,7 @@ function VodSourceRow({
         <TestBadge
           state={testState}
           onTest={onTest}
-          title="测试可用性（搜索耗时与结果量）"
+          title={tr("测试可用性（搜索耗时与结果量）")}
           badgeWhenOk={({ ms }) => `✓ ${ms}ms`}
         />
         {!isEnv &&
@@ -516,16 +511,16 @@ function VodSourceRow({
               <button
                 className="rounded-md p-2 text-muted/30 cursor-not-allowed shrink-0"
                 disabled
-                aria-label="订阅源不可单独编辑"
-                title="该源来自订阅，修改会在下次同步时被覆盖；请修改远端订阅后重新同步"
+                aria-label={tr("订阅源不可单独编辑")}
+                title={tr("该源来自订阅，修改会在下次同步时被覆盖；请修改远端订阅后重新同步")}
               >
                 <Icon name="edit" className="w-4 h-4" />
               </button>
               <button
                 className="rounded-md p-2 text-muted/30 cursor-not-allowed shrink-0"
                 disabled
-                aria-label="订阅源不可单独删除"
-                title="该源来自订阅，单独删除会在下次同步时恢复；请到「数据源订阅」删除整个订阅"
+                aria-label={tr("订阅源不可单独删除")}
+                title={tr("该源来自订阅，单独删除会在下次同步时恢复；请到「数据源订阅」删除整个订阅")}
               >
                 <Icon name="trash" className="w-4 h-4" />
               </button>
@@ -535,16 +530,16 @@ function VodSourceRow({
               <button
                 className="rounded-md p-2 text-muted transition-colors hover:bg-hover hover:text-accent shrink-0"
                 onClick={() => onEdit(api.key)}
-                aria-label="编辑"
-                title="编辑"
+                aria-label={tr("编辑")}
+                title={tr("编辑")}
               >
                 <Icon name="edit" className="w-4 h-4" />
               </button>
               <button
                 className="rounded-md p-2 text-muted transition-colors hover:bg-hover hover:text-danger shrink-0"
                 onClick={remove}
-                aria-label="删除"
-                title="移除（可在提示中撤销）"
+                aria-label={tr("删除")}
+                title={tr("移除（可在提示中撤销）")}
               >
                 <Icon name="trash" className="w-4 h-4" />
               </button>
@@ -558,29 +553,30 @@ function VodSourceRow({
 // —— 偏好设置面板 ——
 
 function PlaybackPanel() {
+  useI18n();
   const store = useAppStore();
   const { toast } = useToast();
   const [clearMarksOpen, setClearMarksOpen] = useState(false);
   const markCount = Object.keys(store.skipMarks).length;
   return (
     <section>
-      <SectionTitle title="播放与过滤" />
+      <SectionTitle title={tr("播放与过滤")} />
       <div className="space-y-3">
         <ToggleRow
-          label="广告切片过滤"
-          description="剔除播放列表中的广告分片段落（按分片 URL 特征、片头插入与长片间超短中插识别，不动 DISCONTINUITY 时间轴）"
+          label={tr("广告切片过滤")}
+          description={tr("剔除播放列表中的广告分片段落（按分片 URL 特征、片头插入与长片间超短中插识别，不动 DISCONTINUITY 时间轴）")}
           checked={store.adFilter}
           onChange={(v) => store.updateSettings({ adFilter: v })}
         />
         <ToggleRow
-          label="自动连播"
-          description="单集播放结束后自动播放下一集"
+          label={tr("自动连播")}
+          description={tr("单集播放结束后自动播放下一集")}
           checked={store.autoplayNext}
           onChange={(v) => store.updateSettings({ autoplayNext: v })}
         />
         <ToggleRow
-          label="自动跳过片段"
-          description="命中片头/中段标记时跳到片段末尾，命中片尾标记时结束本集（是否连播下一集由「自动连播」决定）；关闭后三类都只显示跳过按钮（标记在播放页「跳过标记」中设置）"
+          label={tr("自动跳过片段")}
+          description={tr("命中片头/中段标记时跳到片段末尾，命中片尾标记时结束本集（是否连播下一集由「自动连播」决定）；关闭后三类都只显示跳过按钮（标记在播放页「跳过标记」中设置）")}
           checked={store.autoSkipSegments}
           onChange={(v) => store.updateSettings({ autoSkipSegments: v })}
         />
@@ -589,26 +585,24 @@ function PlaybackPanel() {
       {markCount > 0 && (
         <div className="flex items-center justify-between gap-3 pt-3 mt-3 border-t border-line">
           <div className="min-w-0">
-            <div className="text-sm text-content">跳过片段标记</div>
-            <div className="text-xs text-faint">已记录 {markCount} 部；在播放页「跳过标记」中设置，可逐剧关闭</div>
+            <div className="text-sm text-content">{tr("跳过片段标记")}</div>
+            <div className="text-xs text-faint">{tr("已记录 {count} 部；在播放页「跳过标记」中设置，可逐剧关闭", { count: markCount })}</div>
           </div>
-          <button className="btn-ghost btn-sm shrink-0" onClick={() => setClearMarksOpen(true)}>
-            清除全部
-          </button>
+          <button className="btn-ghost btn-sm shrink-0" onClick={() => setClearMarksOpen(true)}>{tr("清除全部")}</button>
         </div>
       )}
 
       <ConfirmDialog
         open={clearMarksOpen}
         danger
-        title="清除全部跳过片段？"
-        message={`将删除已记录的 ${markCount} 部剧的跳过片段，之后播放不再自动跳过；可重新在播放页标记。`}
-        confirmLabel="清除全部"
+        title={tr("清除全部跳过片段？")}
+        message={tr("将删除已记录的 {count} 部剧的跳过片段，之后播放不再自动跳过；可重新在播放页标记。", { count: markCount })}
+        confirmLabel={tr("清除全部")}
         onCancel={() => setClearMarksOpen(false)}
         onConfirm={() => {
           store.clearAllSkipMarks();
           setClearMarksOpen(false);
-          toast('已清除全部跳过片段标记', 'success');
+          toast(tr('已清除全部跳过片段标记'), 'success');
         }}
       />
 
@@ -619,6 +613,7 @@ function PlaybackPanel() {
 
 /** 片段缓存：开启/关闭 + 用量展示 + 清理（数据在浏览器本地，独立于配置导出） */
 function VideoCachePanel() {
+  useI18n();
   const [enabled, setEnabled] = useState(() => loadCacheSettings().enabled);
   const [summary, setSummary] = useState<CacheSummary>({ segments: 0, bytes: 0, episodes: 0 });
   const [clearing, setClearing] = useState(false);
@@ -640,8 +635,8 @@ function VideoCachePanel() {
   return (
     <div className="space-y-3 pt-3 mt-3 border-t border-line">
       <ToggleRow
-        label="片段本地缓存"
-        description="暂停或观看时把后续分片缓存到浏览器本地，二次播放与断网卡顿时直接命中（存储于本机，不计入配置导出）"
+        label={tr("片段本地缓存")}
+        description={tr("暂停或观看时把后续分片缓存到浏览器本地，二次播放与断网卡顿时直接命中（存储于本机，不计入配置导出）")}
         checked={enabled}
         onChange={(v) => {
           const next = saveCacheSettings({ enabled: v });
@@ -650,7 +645,7 @@ function VideoCachePanel() {
       />
       <div className="flex items-center justify-between text-xs text-faint">
         <span>
-          已缓存 {summary.segments} 个分片 · {formatBytes(summary.bytes)} · {summary.episodes} 集
+          {tr("已缓存 {segments} 个分片 · {bytes} · {episodes} 集", { segments: summary.segments, bytes: formatBytes(summary.bytes), episodes: summary.episodes })}
         </span>
         <button
           type="button"
@@ -662,35 +657,34 @@ function VideoCachePanel() {
             refresh();
             setClearing(false);
           }}
-        >
-          清理缓存
-        </button>
+        >{tr("清理缓存")}</button>
       </div>
     </div>
   );
 }
 
 function ImagePanel() {
+  useI18n();
   const store = useAppStore();
   const mode = store.imageProxyMode;
   const description: Record<'direct' | 'proxy' | 'custom', string> = {
-    direct: '原站直连；豆瓣封面自动换公共镜像，仍失败回退内置代理。最省服务器流量',
-    proxy: '封面优先经本站服务器转发并伪装来源，失败自动回退公共镜像/直连。最稳定，消耗服务器流量',
-    custom: '使用你填写的模板转发封面图',
+    direct: tr('原站直连；豆瓣封面自动换公共镜像，仍失败回退内置代理。最省服务器流量'),
+    proxy: tr('封面优先经本站服务器转发并伪装来源，失败自动回退公共镜像/直连。最稳定，消耗服务器流量'),
+    custom: tr('使用你填写的模板转发封面图'),
   };
   return (
     <section>
-      <SectionTitle title="封面图加载" />
+      <SectionTitle title={tr("封面图加载")} />
       <div className="space-y-2">
         <SelectRow
-          label="加载方式"
+          label={tr("加载方式")}
           value={mode}
           description={description[mode]}
           onChange={(v) => store.updateSettings({ imageProxyMode: v as 'direct' | 'proxy' | 'custom' })}
           options={[
-            { value: 'direct', label: '直连优先', hint: '最省服务器流量' },
-            { value: 'proxy', label: '内置代理', hint: '最稳定' },
-            { value: 'custom', label: '自定义', hint: '自建转发模板' },
+            { value: 'direct', label: tr('直连优先'), hint: tr('最省服务器流量') },
+            { value: 'proxy', label: tr('内置代理'), hint: tr('最稳定') },
+            { value: 'custom', label: tr('自定义'), hint: tr('自建转发模板') },
           ]}
         />
         {mode === 'custom' && <CustomProxyInput />}
@@ -704,6 +698,7 @@ function ImagePanel() {
  * 直接每次按键写 store 会让全站封面 URL 重算并触发一轮图片重载（模板输入时缩略图持续闪烁）。
  */
 function CustomProxyInput() {
+  useI18n();
   const value = useAppStore((s) => s.customImageProxy);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const [draft, setDraft] = useState(value);
@@ -720,8 +715,8 @@ function CustomProxyInput() {
   return (
     <input
       className="input w-full"
-      aria-label="自定义代理模板"
-      placeholder="代理模板，如 https://p.example.com/?url={url}"
+      aria-label={tr("自定义代理模板")}
+      placeholder={tr("代理模板，如 https://p.example.com/?url={url}")}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
     />
@@ -729,31 +724,32 @@ function CustomProxyInput() {
 }
 
 function HomePanel() {
+  useI18n();
   const store = useAppStore();
   return (
     <section>
-      <SectionTitle title="首页与内容过滤" />
+      <SectionTitle title={tr("首页与内容过滤")} />
       <div className="space-y-3">
         <ToggleRow
-          label="成人内容过滤"
-          description="过滤“伦理片”等分类的结果"
+          label={tr("成人内容过滤")}
+          description={tr("过滤“伦理片”等分类的结果")}
           checked={store.yellowFilter}
           onChange={(v) => store.updateSettings({ yellowFilter: v })}
         />
         <ToggleRow
-          label="首页推荐"
-          description="在首页展示推荐内容"
+          label={tr("首页推荐")}
+          description={tr("在首页展示推荐内容")}
           checked={store.doubanEnabled}
           onChange={(v) => store.updateSettings({ doubanEnabled: v })}
         />
         <SelectRow
-          label="推荐数据源"
+          label={tr("推荐数据源")}
           value={store.recommendSource}
           onChange={(v) => store.updateSettings({ recommendSource: v as 'douban' | 'bangumi' | 'hot-list' })}
           options={[
-            { value: 'douban', label: '豆瓣', hint: '热门电影与剧集' },
-            { value: 'bangumi', label: 'Bangumi', hint: '每日新番放送（免 key）' },
-            { value: 'hot-list', label: '影视榜单', hint: '豆瓣周榜 / 百度热播' },
+            { value: 'douban', label: tr('豆瓣'), hint: tr('热门电影与剧集') },
+            { value: 'bangumi', label: 'Bangumi', hint: tr('每日新番放送（免 key）') },
+            { value: 'hot-list', label: tr('影视榜单'), hint: tr('豆瓣周榜 / 百度热播') },
           ]}
         />
       </div>
@@ -784,6 +780,7 @@ const REFRESH_OPTIONS: DropdownOption[] = [
  * - 分享：把当前点播源 + 直播源导出为同格式 JSON 文件，托管到任意位置即可被他人订阅。
  */
 function SourceSubscriptions() {
+  useI18n();
   const store = useAppStore();
   const { toast } = useToast();
   const [subUrl, setSubUrl] = useState('');
@@ -796,17 +793,17 @@ function SourceSubscriptions() {
     try {
       const { vodCount, liveCount, stats } = await syncSourceSubscription(url);
       // 如实说明跳过/截断情况，避免用户疑惑「配置里站点很多，为何只导入了个位数」
-      const detail = describeParseStats(stats, { includeSamples: false });
+      const detail = describeParseStats(stats, { includeSamples: false, localize: tr });
       const formatLabel =
         stats?.format === 'tvbox'
-          ? '（TVBOX 配置）'
+          ? tr('（TVBOX 配置）')
           : stats?.format === 'source-catalog'
-            ? '（接口源列表）'
+            ? tr('（接口源列表）')
             : '';
-      toast(`已同步 ${vodCount} 个点播源、${liveCount} 个直播源${formatLabel}${detail ? `；${detail}` : ''}`, 'success');
+      toast(tr("已同步 {vod} 个点播源、{live} 个直播源{format}{detail}", { vod: vodCount, live: liveCount, format: formatLabel, detail: detail ? `; ${detail}` : '' }), 'success');
       setSubUrl('');
     } catch (err) {
-      toast(err instanceof Error ? err.message : '订阅同步失败', 'error');
+      toast(err instanceof Error ? tr(err.message) : tr('订阅同步失败'), 'error');
     } finally {
       setSyncing((prev) => {
         const next = new Set(prev);
@@ -819,7 +816,7 @@ function SourceSubscriptions() {
   const addAndSync = () => {
     const url = subUrl.trim();
     if (!validateSourceUrl(url)) {
-      toast('订阅地址需以 http:// 或 https:// 开头', 'warning');
+      toast(tr('订阅地址需以 http:// 或 https:// 开头'), 'warning');
       return;
     }
     void sync(url);
@@ -862,7 +859,7 @@ function SourceSubscriptions() {
       .map(({ name, url, epg }) => ({ name: name || hostnameOf(url), url, epg }));
 
     if (sources.length === 0 && liveSources.length === 0) {
-      toast('没有已勾选启用的源可发布', 'warning');
+      toast(tr('没有已勾选启用的源可发布'), 'warning');
       return;
     }
 
@@ -870,9 +867,9 @@ function SourceSubscriptions() {
     try {
       const result = await api.publishSourceList({ name: 'LibreTV-SourceList', sources, liveSources });
       setPublished(result);
-      toast(`已发布 ${result.sources} 个点播源、${result.liveSources} 个直播源到 ${result.provider}`, 'success');
+      toast(tr("已发布 {vod} 个点播源、{live} 个直播源到 {provider}", { vod: result.sources, live: result.liveSources, provider: result.provider }), 'success');
     } catch (err) {
-      toast(err instanceof Error ? err.message : '发布失败', 'error');
+      toast(err instanceof Error ? tr(err.message) : tr('发布失败'), 'error');
     } finally {
       setPublishing(false);
     }
@@ -881,7 +878,7 @@ function SourceSubscriptions() {
   const copyPublished = () => {
     if (!published) return;
     copyToClipboard(published.url).then((ok) =>
-      ok ? toast('订阅链接已复制', 'success') : toast('复制失败，请手动选中复制', 'warning'),
+      ok ? toast(tr('订阅链接已复制'), 'success') : toast(tr('复制失败，请手动选中复制'), 'warning'),
     );
   };
 
@@ -915,7 +912,7 @@ function SourceSubscriptions() {
     a.download = `LibreTV-SourceList_${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast(`已导出 ${sources.length} 个点播源、${liveSources.length} 个直播源，托管后即可被他人订阅`, 'success');
+    toast(tr("已导出 {vod} 个点播源、{live} 个直播源，托管后即可被他人订阅", { vod: sources.length, live: liveSources.length }), 'success');
   };
 
   const deleteImpact = (url: string) => {
@@ -929,7 +926,7 @@ function SourceSubscriptions() {
   return (
     <section>
       <SectionTitle
-        title="数据源订阅 / 分享"
+        title={tr("数据源订阅 / 分享")}
         extra={
           <div className="flex items-center gap-1.5 shrink-0">
             <button
@@ -939,16 +936,14 @@ function SourceSubscriptions() {
                 store.customAPIs.length + store.envSources.length + store.liveSubscriptions.length + store.liveEnvSources.length ===
                 0
               }
-            >
-              导出数据源
-            </button>
+            >{tr("导出数据源")}</button>
             <button
               className="btn-ghost btn-sm"
               onClick={() => void publish()}
               disabled={publishing}
-              title="把当前已勾选启用的源上传到公开粘贴板，生成可直接订阅的链接"
+              title={tr("把当前已勾选启用的源上传到公开粘贴板，生成可直接订阅的链接")}
             >
-              {publishing ? '发布中…' : '发布为链接'}
+              {publishing ? tr('发布中…') : tr('发布为链接')}
             </button>
           </div>
         }
@@ -962,25 +957,20 @@ function SourceSubscriptions() {
               readOnly
               value={published.url}
               className="input flex-1 min-w-0 !py-1.5 text-xs"
-              aria-label="已发布的订阅地址"
+              aria-label={tr("已发布的订阅地址")}
               onFocus={(e) => e.currentTarget.select()}
             />
-            <button className="btn-ghost btn-sm shrink-0" onClick={copyPublished}>
-              复制
-            </button>
+            <button className="btn-ghost btn-sm shrink-0" onClick={copyPublished}>{tr("复制")}</button>
             <button
               className="btn-ghost btn-sm shrink-0"
               onClick={() => {
                 setSubUrl(published.url);
                 void sync(published.url);
               }}
-            >
-              直接订阅
-            </button>
+            >{tr("直接订阅")}</button>
           </div>
           <p className="mt-1.5 text-[11px] text-faint leading-relaxed">
-            已发布到 {published.provider}（{published.sources} 个点播源、{published.liveSources} 个直播源）。
-            链接内容公开可读，粘贴板也可能随时清理——长期使用建议自行托管。
+            {tr("已发布到 {provider}（{vod} 个点播源、{live} 个直播源）。链接内容公开可读，粘贴板也可能随时清理——长期使用建议自行托管。", { provider: published.provider, vod: published.sources, live: published.liveSources })}
           </p>
         </div>
       )}
@@ -988,7 +978,8 @@ function SourceSubscriptions() {
       <div className="flex gap-2 mb-2">
         <input
           className="input flex-1 min-w-0"
-          placeholder="订阅地址（LibreTV 源列表或 TVBOX 配置的 JSON URL）"
+          aria-label={tr("订阅地址（LibreTV 源列表或 TVBOX 配置的 JSON URL）")}
+          placeholder={tr("订阅地址（LibreTV 源列表或 TVBOX 配置的 JSON URL）")}
           value={subUrl}
           onChange={(e) => setSubUrl(e.target.value)}
           onKeyDown={(e) => {
@@ -1000,14 +991,11 @@ function SourceSubscriptions() {
           disabled={!subUrl.trim() || syncing.size > 0}
           onClick={addAndSync}
         >
-          {syncing.size > 0 ? '同步中…' : '订阅'}
+          {syncing.size > 0 ? tr('同步中…') : tr('订阅')}
         </button>
       </div>
       {store.subscriptions.length === 0 ? (
-        <p className="text-xs text-faint">
-          一份订阅可同时下发点播源与直播源，支持 LibreTV 源列表与 TVBOX 配置（仅导入可直接使用的接口，Spider 类站点自动跳过）；
-          「导出数据源」生成的 JSON 托管到任意 URL 即可分享给他人订阅。
-        </p>
+        <p className="text-xs text-faint">{tr("一份订阅可同时下发点播源与直播源，支持 LibreTV 源列表与 TVBOX 配置（仅导入可直接使用的接口，Spider 类站点自动跳过）；「导出数据源」生成的 JSON 托管到任意 URL 即可分享给他人订阅。")}</p>
       ) : (
         <ul className="space-y-2">
           {store.subscriptions.map((sub) => {
@@ -1035,24 +1023,22 @@ function SourceSubscriptions() {
                     <div className="text-sm font-medium text-content truncate">{sub.name || hostnameOf(sub.url)}</div>
                     <div className="text-xs text-faint truncate">
                       {sub.url}
-                      {sub.lastSync && ` · 同步于 ${formatRelativeTime(sub.lastSync)}`}
+                      {sub.lastSync && tr(" · 同步于 {time}", { time: formatRelativeTime(sub.lastSync) })}
                     </div>
                     <div className="mt-1 flex items-center gap-1 flex-wrap">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent">点播 {vodCount}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent">直播 {liveCount}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent">{tr("点播 {count}", { count: vodCount })}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent">{tr("直播 {count}", { count: liveCount })}</span>
                       {sub.enabled === false && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/15 text-warning">已停用</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/15 text-warning">{tr("已停用")}</span>
                       )}
                       {sub.lastStatus === 'error' ? (
                         <span
                           className="text-[10px] px-1.5 py-0.5 rounded bg-danger/15 text-danger"
                           title={sub.lastError}
-                        >
-                          上次同步失败
-                        </span>
+                        >{tr("上次同步失败")}</span>
                       ) : sub.lastStatus === 'ok' && sub.lastCounts ? (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success">
-                          上次导入 {sub.lastCounts.vod} 点播 / {sub.lastCounts.live} 直播
+                          {tr("上次导入 {vod} 点播 / {live} 直播", { vod: sub.lastCounts.vod, live: sub.lastCounts.live })}
                         </span>
                       ) : null}
                     </div>
@@ -1062,43 +1048,43 @@ function SourceSubscriptions() {
                     {/* 自动刷新：默认「手动」，显式设了周期才会在打开站点时静默刷新 */}
                     <div className="mt-1.5 flex items-center gap-1.5 flex-wrap text-[11px] text-faint">
                       <Icon name="clock" className="w-3 h-3 shrink-0" />
-                      <span>自动刷新</span>
+                      <span>{tr("自动刷新")}</span>
                       <Dropdown
                         value={sub.refreshDays ? String(sub.refreshDays) : 'off'}
                         onChange={(v) =>
                           store.setSubscriptionRefreshDays(sub.url, v === 'off' ? undefined : Number(v))
                         }
-                        options={REFRESH_OPTIONS}
-                        ariaLabel="自动刷新周期"
+                        options={REFRESH_OPTIONS.map((option) => ({ ...option, label: tr(option.label), hint: option.hint ? tr(option.hint) : undefined }))}
+                        ariaLabel={tr("自动刷新周期")}
                         className="[&>button]:!py-0.5 [&>button]:!pl-2 [&>button]:!pr-1.5 [&>button]:text-[11px]"
                       />
                       {paused ? (
                         <span className="text-warning">
-                          已暂停：连续失败 {sub.failStreak} 次，手动同步成功即恢复
+                          {tr("已暂停：连续失败 {count} 次，手动同步成功即恢复", { count: sub.failStreak ?? 0 })}
                         </span>
                       ) : remainingMs > 0 ? (
-                        <span>约 {Math.max(1, Math.ceil(remainingMs / 86_400_000))} 天后刷新</span>
+                        <span>{tr("约 {days} 天后刷新", { days: Math.max(1, Math.ceil(remainingMs / 86_400_000)) })}</span>
                       ) : sub.refreshDays ? (
-                        <span>下次打开站点时刷新</span>
+                        <span>{tr("下次打开站点时刷新")}</span>
                       ) : null}
                     </div>
                   </div>
                   <Switch
                     checked={sub.enabled !== false}
                     onChange={(v) => store.setSubscriptionEnabled(sub.url, v)}
-                    label={sub.enabled === false ? '启用该订阅' : '停用该订阅'}
+                    label={sub.enabled === false ? tr('启用该订阅') : tr('停用该订阅')}
                     title={
                       sub.enabled === false
-                        ? '当前已停用（其源不参与搜索），点击启用'
-                        : '停用后该订阅下的源暂不参与搜索；已导入的数据与各源勾选状态都保留'
+                        ? tr('当前已停用（其源不参与搜索），点击启用')
+                        : tr('停用后该订阅下的源暂不参与搜索；已导入的数据与各源勾选状态都保留')
                     }
                   />
                   <button
                     className="rounded-md p-2 shrink-0 text-muted transition-colors hover:bg-hover hover:text-accent disabled:opacity-40"
                     disabled={isSyncing}
                     onClick={() => sync(sub.url)}
-                    aria-label="重新同步"
-                    title="重新同步（以远端列表为准，整体替换该订阅名下的点播源与直播源）"
+                    aria-label={tr("重新同步")}
+                    title={tr("重新同步（以远端列表为准，整体替换该订阅名下的点播源与直播源）")}
                   >
                     {isSyncing ? (
                       <Spinner size="sm" />
@@ -1109,8 +1095,8 @@ function SourceSubscriptions() {
                   <button
                     className="rounded-md p-2 shrink-0 text-muted transition-colors hover:bg-hover hover:text-danger"
                     onClick={() => setPendingDelete(sub.url)}
-                    aria-label="删除订阅"
-                    title="删除订阅及其导入的点播源与直播源（保留收藏的频道）"
+                    aria-label={tr("删除订阅")}
+                    title={tr("删除订阅及其导入的点播源与直播源（保留收藏的频道）")}
                   >
                     <Icon name="trash" className="w-4 h-4" />
                   </button>
@@ -1125,27 +1111,27 @@ function SourceSubscriptions() {
       <ConfirmDialog
         open={pendingDelete !== null}
         danger
-        title="删除该订阅？"
+        title={tr("删除该订阅？")}
         message={
           pendingDelete
             ? (() => {
                 const impact = deleteImpact(pendingDelete);
                 const parts: string[] = [];
-                if (impact.vod > 0) parts.push(`${impact.vod} 个点播源`);
-                if (impact.live > 0) parts.push(`${impact.live} 个直播源`);
+                if (impact.vod > 0) parts.push(tr("{count} 个点播源", { count: impact.vod }));
+                if (impact.live > 0) parts.push(tr("{count} 个直播源", { count: impact.live }));
                 return parts.length > 0
-                  ? `将同时删除该订阅导入的 ${parts.join(' 与 ')}；你收藏的频道会保留。`
-                  : '该订阅当前未导入任何源，删除后不影响其他数据。';
+                  ? tr("将同时删除该订阅导入的 {sources}；你收藏的频道会保留。", { sources: parts.join(tr(' 与 ')) })
+                  : tr('该订阅当前未导入任何源，删除后不影响其他数据。');
               })()
             : undefined
         }
-        confirmLabel="删除订阅"
+        confirmLabel={tr("删除订阅")}
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => {
           const url = pendingDelete;
           if (url) useAppStore.getState().removeSubscription(url);
           setPendingDelete(null);
-          toast('订阅已删除', 'success');
+          toast(tr('订阅已删除'), 'success');
         }}
       />
     </section>
@@ -1154,9 +1140,10 @@ function SourceSubscriptions() {
 
 /** 配置导入导出（导出受登录门控；导入前先解析预览再确认，避免误覆盖） */
 function ConfigIoPanel() {
+  useI18n();
   const { toast } = useToast();
   const { verified, openLogin } = useAuth();
-  const [pending, setPending] = useState<{ file: File; summary: string } | null>(null);
+  const [pending, setPending] = useState<{ file: File; text: string } | null>(null);
 
   const doExport = async () => {
     if (verified === false) {
@@ -1172,18 +1159,19 @@ function ConfigIoPanel() {
       a.download = `LibreTV-Settings_${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast('配置已导出', 'success');
+      toast(tr('配置已导出'), 'success');
     } catch {
-      toast('导出失败', 'error');
+      toast(tr('导出失败'), 'error');
     }
   };
 
   const pickImport = async (file: File) => {
     try {
-      const summary = summarizeConfig(await file.text());
-      setPending({ file, summary });
+      const text = await file.text();
+      summarizeConfig(text); // Validate before asking to replace current data.
+      setPending({ file, text });
     } catch (err) {
-      toast(err instanceof Error ? err.message : '导入失败', 'error');
+      toast(err instanceof Error ? tr(err.message) : tr('导入失败'), 'error');
     }
   };
 
@@ -1192,23 +1180,19 @@ function ConfigIoPanel() {
     try {
       await importConfig(await pending.file.text());
       setPending(null);
-      toast('配置导入成功，即将刷新页面', 'success');
+      toast(tr('配置导入成功，即将刷新页面'), 'success');
       setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
-      toast(err instanceof Error ? err.message : '导入失败', 'error');
+      toast(err instanceof Error ? tr(err.message) : tr('导入失败'), 'error');
     }
   };
 
   return (
     <section>
-      <SectionTitle title="配置导入导出" hint="导出/导入包含数据源、订阅与偏好设置的整机配置" />
+      <SectionTitle title={tr("配置导入导出")} hint={tr("导出/导入包含数据源、订阅与偏好设置的整机配置")} />
       <div className="flex gap-2">
-        <button className="btn-ghost flex-1 text-xs" onClick={doExport}>
-          导出配置
-        </button>
-        <label className="btn-ghost flex-1 text-xs cursor-pointer">
-          导入配置
-          <input
+        <button className="btn-ghost flex-1 text-xs" onClick={doExport}>{tr("导出配置")}</button>
+        <label className="btn-ghost flex-1 text-xs cursor-pointer">{tr("导入配置")}<input
             type="file"
             accept=".json,application/json"
             className="hidden"
@@ -1225,9 +1209,9 @@ function ConfigIoPanel() {
       <ConfirmDialog
         open={pending !== null}
         danger
-        title="导入配置并覆盖当前数据？"
-        message={pending ? `${pending.summary}。导入后将立即刷新页面，当前设备上的配置与观看历史会被覆盖。` : undefined}
-        confirmLabel="导入并覆盖"
+        title={tr("导入配置并覆盖当前数据？")}
+        message={pending ? tr("{summary}。导入后将立即刷新页面，当前设备上的配置与观看历史会被覆盖。", { summary: summarizeConfig(pending.text) }) : undefined}
+        confirmLabel={tr("导入并覆盖")}
         onCancel={() => setPending(null)}
         onConfirm={confirmImport}
       />
@@ -1241,9 +1225,9 @@ function summarizeConfig(text: string): string {
   try {
     cfg = JSON.parse(text) as { name?: string; data?: Record<string, unknown> };
   } catch {
-    throw new Error('文件不是合法的 JSON');
+    throw new Error(tr('文件不是合法的 JSON'));
   }
-  if (cfg.name !== 'LibreTV-Settings') throw new Error('不是 LibreTV 的配置文件');
+  if (cfg.name !== 'LibreTV-Settings') throw new Error(tr('不是 LibreTV 的配置文件'));
 
   const parts: string[] = [];
   const settingsRaw = cfg.data?.[PERSIST_KEY];
@@ -1253,7 +1237,7 @@ function summarizeConfig(text: string): string {
       const vod = Array.isArray(state.customAPIs) ? state.customAPIs.length : 0;
       const live = Array.isArray(state.liveSubscriptions) ? state.liveSubscriptions.length : 0;
       const subs = Array.isArray(state.subscriptions) ? state.subscriptions.length : 0;
-      parts.push(`${vod} 个点播源`, `${live} 个直播源`, `${subs} 个订阅`);
+      parts.push(tr("{count} 个点播源", { count: vod }), tr("{count} 个直播源", { count: live }), tr("{count} 个订阅", { count: subs }));
     } catch {
       /* 设置片段损坏时忽略该部分统计 */
     }
@@ -1262,12 +1246,12 @@ function summarizeConfig(text: string): string {
   if (typeof historyRaw === 'string') {
     try {
       const h = JSON.parse(historyRaw);
-      if (Array.isArray(h)) parts.push(`${h.length} 条观看历史`);
+      if (Array.isArray(h)) parts.push(tr("{count} 条观看历史", { count: h.length }));
     } catch {
       /* 忽略 */
     }
   }
-  return parts.length > 0 ? `该文件包含 ${parts.join('、')}` : '该文件未包含可导入的数据';
+  return parts.length > 0 ? tr("该文件包含 {summary}", { summary: parts.join(', ') }) : tr('该文件未包含可导入的数据');
 }
 
 function SourceForm({
@@ -1281,6 +1265,7 @@ function SourceForm({
   onCancel: () => void;
   onSubmit: (data: { name: string; url: string; detail?: string; isAdult?: boolean }) => void;
 }) {
+  useI18n();
   const [name, setName] = useState(initial?.name ?? '');
   const [url, setUrl] = useState(initial?.url ?? '');
   const [detail, setDetail] = useState(initial?.detail ?? '');
@@ -1302,11 +1287,11 @@ function SourceForm({
     const n = name.trim();
     const u = url.trim().replace(/\/+$/, '');
     if (!n || !u) {
-      toast('请输入 API 名称和链接', 'warning');
+      toast(tr('请输入 API 名称和链接'), 'warning');
       return;
     }
     if (!validateSourceUrl(u)) {
-      toast('API 链接需以 http:// 或 https:// 开头', 'warning');
+      toast(tr('API 链接需以 http:// 或 https:// 开头'), 'warning');
       return;
     }
     onSubmit({ name: n, url: u, detail: detail.trim() || undefined, isAdult });
@@ -1316,22 +1301,22 @@ function SourceForm({
     <div className="space-y-2 border border-line rounded-lg p-3 bg-chip mb-2">
     <input
       className="input w-full"
-      aria-label="点播源名称"
-      placeholder="名称"
+      aria-label={tr("点播源名称")}
+      placeholder={tr("名称")}
       value={name}
       onChange={(e) => setName(e.target.value)}
     />
     <input
       className="input w-full"
-      aria-label="API 地址"
-      placeholder="API 地址，如 https://example.com/api.php/provide/vod"
+      aria-label={tr("API 地址")}
+      placeholder={tr("API 地址，如 https://example.com/api.php/provide/vod")}
       value={url}
       onChange={(e) => setUrl(e.target.value)}
     />
     <input
       className="input w-full"
-      aria-label="详情页地址（可选）"
-      placeholder="详情页地址（可选），如 https://example.com"
+      aria-label={tr("详情页地址（可选）")}
+      placeholder={tr("详情页地址（可选），如 https://example.com")}
       value={detail}
       onChange={(e) => setDetail(e.target.value)}
     />
@@ -1341,15 +1326,11 @@ function SourceForm({
           className="h-3.5 w-3.5 accent-pink-500"
           checked={isAdult}
           onChange={(e) => setIsAdult(e.target.checked)}
-        />
-        标记为成人内容源（受成人过滤控制）
-      </label>
+        />{tr("标记为成人内容源（受成人过滤控制）")}</label>
       <div className="flex gap-2 justify-end">
-        <button className="btn-ghost btn-sm" onClick={onCancel}>
-          取消
-        </button>
+        <button className="btn-ghost btn-sm" onClick={onCancel}>{tr("取消")}</button>
         <button className="btn-primary btn-sm" onClick={submit}>
-          {initial ? '更新' : '添加'}
+          {initial ? tr('更新') : tr('添加')}
         </button>
       </div>
     </div>

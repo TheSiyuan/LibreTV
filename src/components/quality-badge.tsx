@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as t } from '@/lib/i18n';
+
 import { cn } from '@/lib/utils';
 import { describeQualityBadge } from '@/lib/quality';
 import type { QualityEntry } from '@/lib/types';
@@ -26,6 +29,7 @@ export function QualityBadge({
   showReason?: boolean;
   className?: string;
 }) {
+  useI18n();
   const view = describeQualityBadge(entry, loading);
   if (!view) return null;
 
@@ -33,8 +37,8 @@ export function QualityBadge({
     return (
       <span
         className={cn('tag bg-chip text-faint shrink-0 animate-pulse', className)}
-        title={view.title}
-        aria-label="正在探测画质"
+        title={t(view.title)}
+        aria-label={t("正在探测画质")}
       >
         …
       </span>
@@ -51,9 +55,9 @@ export function QualityBadge({
           height >= 1080 ? 'bg-accent/15 text-accent' : height > 0 && height < 480 ? 'bg-chip text-faint' : 'bg-chip text-muted',
           className
         )}
-        title={view.title}
+        title={t(view.title)}
       >
-        {view.label}
+        {view.label && t(view.label)}
       </span>
     );
   }
@@ -74,11 +78,11 @@ export function QualityBadge({
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/40',
           className
         )}
-        title={view.title}
-        aria-label={`本次没测到画质${view.reason ? `（${view.reason}）` : ''}，点击重试`}
+        title={t(view.title)}
+        aria-label={t('画质未测出{reason}，点击重试', { reason: view.reason ? ` (${t(view.reason)})` : '' })}
       >
-        {view.label ?? '未测到'}
-        {showReason && view.reason && <span className="ml-0.5 opacity-80">·{view.reason}</span>}
+        {t(view.label ?? "未测到")}
+        {showReason && view.reason && <span className="ml-0.5 opacity-80">·{t(view.reason)}</span>}
       </button>
     );
   }
@@ -86,10 +90,10 @@ export function QualityBadge({
   return (
     <span
       className={cn('tag shrink-0', view.kind === 'failed' ? 'bg-warning/15 text-warning' : 'bg-chip text-faint', className)}
-      title={view.title}
+      title={t(view.title)}
     >
-      {view.kind === 'failed' ? view.label ?? '未测到' : '未知'}
-      {showReason && view.reason && <span className="ml-0.5 opacity-80">·{view.reason}</span>}
+      {view.kind === 'failed' ? t(view.label ?? "未测到") : t("未知")}
+      {showReason && view.reason && <span className="ml-0.5 opacity-80">·{t(view.reason)}</span>}
     </span>
   );
 }

@@ -1,5 +1,10 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as t } from '@/lib/i18n';
+import { syncArtplayerLocale } from '@/lib/i18n-player';
+import { PlayerPoster } from './player-poster';
+
 import { useEffect, useRef, useState } from 'react';
 import Artplayer from 'artplayer';
 import Hls, { type HlsConfig } from 'hls.js';
@@ -51,6 +56,7 @@ interface LivePlayerProps {
 }
 
 export function LivePlayer({ url, title, onPrevChannel, onNextChannel }: LivePlayerProps) {
+  const { locale } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const artRef = useRef<any>(null);
@@ -278,7 +284,7 @@ export function LivePlayer({ url, title, onPrevChannel, onNextChannel }: LivePla
         position: 'left',
         index: 0,
         html: channelBtnSvg('M11 19l-7-7 7-7m8 14l-7-7 7-7'),
-        tooltip: '上一台',
+        tooltip: t('上一台'),
         click: () => onPrevChannel(),
       });
     }
@@ -288,7 +294,7 @@ export function LivePlayer({ url, title, onPrevChannel, onNextChannel }: LivePla
         position: 'left',
         index: 1,
         html: channelBtnSvg('M13 5l7 7-7 7M5 5l7 7-7 7'),
-        tooltip: '下一台',
+        tooltip: t('下一台'),
         click: () => onNextChannel(),
       });
     }
@@ -320,7 +326,7 @@ export function LivePlayer({ url, title, onPrevChannel, onNextChannel }: LivePla
       airplay: true,
       theme: '#2563eb',
       controls,
-      lang: navigator.language.toLowerCase().startsWith('zh') ? 'zh-cn' : 'en',
+      lang: locale === 'zh-CN' ? 'zh-cn' : 'en',
       moreVideoAttr: { playsInline: true },
       customType: {
         m3u8: (video: HTMLVideoElement) => {
@@ -380,30 +386,29 @@ export function LivePlayer({ url, title, onPrevChannel, onNextChannel }: LivePla
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, retryNonce, onPrevChannel, onNextChannel]);
 
+  // Keep the current stream and playback position when changing interface language.
+  useEffect(() => {
+    const art = artRef.current;
+    if (!art) return;
+    syncArtplayerLocale(art, locale);
+    if (onPrevChannel) art.controls.update({ name: 'prev-channel', tooltip: t('上一台') });
+    if (onNextChannel) art.controls.update({ name: 'next-channel', tooltip: t('下一台') });
+  }, [locale, url, retryNonce, onPrevChannel, onNextChannel]);
+
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full" />
       {/* 起播前的品牌占位图 */}
-      {showPoster && !error && (
-        <div
-          className="absolute inset-0 bg-black pointer-events-none"
-          style={{
-            backgroundImage: 'url(/player-poster.png)',
-            backgroundSize: 'contain',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-          }}
-        />
-      )}
+      {showPoster && !error && <PlayerPoster />}
       {/* LIVE 呼吸标识 */}
       {!error && (
         <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded-full pointer-events-none">
           <span className="live-dot" />
-          <span className="text-[10px] font-semibold text-white tracking-wider">LIVE</span>
+          <span className="text-[10px] font-semibold text-white tracking-wider">{t('直播中')}</span>
         </div>
       )}
       {/* 换台 OSD：频道名（全屏内同样可见） */}
-      {osdTitle && !error && (
+      {osdTitle && !error && !hint && (
         <div className="absolute top-3 left-3 flex items-center max-w-[70%] bg-black/60 px-3 py-1.5 rounded-full pointer-events-none animate-fade-in">
           <span className="text-sm font-medium text-white truncate">{osdTitle}</span>
         </div>
@@ -415,7 +420,7 @@ export function LivePlayer({ url, title, onPrevChannel, onNextChannel }: LivePla
       )}
       {error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/80">
-          <p className="text-danger text-sm px-4 text-center">{error}</p>
+          <p className="text-danger text-sm px-4 text-center">{t(error)}</p>
           <button
             className="btn-ghost text-xs !bg-white/10 !text-white !border-white/20"
             onClick={() => {
@@ -425,13 +430,13 @@ export function LivePlayer({ url, title, onPrevChannel, onNextChannel }: LivePla
               setRetryNonce((n) => n + 1);
             }}
           >
-            重新加载
+            {t('重新加载')}
           </button>
         </div>
       )}
       {hint && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/70 text-white text-sm px-3 py-1.5 rounded-full pointer-events-none animate-fade-in">
-          {hint}
+          {t(hint)}
         </div>
       )}
     </div>

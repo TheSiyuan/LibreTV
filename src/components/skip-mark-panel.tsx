@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as t } from '@/lib/i18n';
+
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import {
@@ -69,6 +72,7 @@ export function SkipMarkPanel({
    */
   mobileMaxHeight?: number;
 }) {
+  useI18n();
   const mark = useAppStore((s) => s.skipMarks[markKey]);
   const setSkipMark = useAppStore((s) => s.setSkipMark);
   const setSkipMarkEnabled = useAppStore((s) => s.setSkipMarkEnabled);
@@ -103,7 +107,7 @@ export function SkipMarkPanel({
   const pauseAndSnap = (): { t: number; duration: number } | null => {
     const c = getPlayerClock();
     if (!c) {
-      toast('播放器尚未就绪，请稍后再试', 'warning');
+      toast(t('播放器尚未就绪，请稍后再试'), 'warning');
       return null;
     }
     if (!c.isPaused()) c.pause();
@@ -115,24 +119,24 @@ export function SkipMarkPanel({
   const tryRecord = (segment: SkipSegment, label: string, duration: number): boolean => {
     const error = validateSegment(segment, duration, segments);
     if (error) {
-      toast(error, 'error');
+      toast(t(error), 'error');
       return false;
     }
     write([...segments, segment]);
     const effect = autoSkipSegments
       ? segment.type === 'ending'
-        ? '，越过起点后自动结束本集'
-        : '，命中时将自动跳过'
+        ? t('，越过起点后自动结束本集')
+        : t('，命中时将自动跳过')
       : segment.type === 'ending'
-        ? '，命中时显示「跳过片尾」按钮'
-        : '，命中时显示跳过按钮';
+        ? t('，命中时显示「跳过片尾」按钮')
+        : t('，命中时显示跳过按钮');
     const at =
       segment.type === 'ending'
         ? formatTime(segment.start)
         : segment.type === 'middle'
           ? `${formatTime(segment.start)} → ${formatTime(segment.end)}`
           : formatTime(segment.end);
-    toast(`已记录${label} ${at}${effect}`, 'success');
+    toast(t('已记录{label} {time}{effect}', { label, time: at, effect }), 'success');
     return true;
   };
 
@@ -140,22 +144,22 @@ export function SkipMarkPanel({
     const snap = pauseAndSnap();
     if (!snap) return;
     if (snap.t <= 0) {
-      toast(type === 'opening' ? '请先播放到片头结束的位置' : '请先播放到片尾开始的位置', 'warning');
+      toast(type === 'opening' ? t('请先播放到片头结束的位置') : t('请先播放到片尾开始的位置'), 'warning');
       return;
     }
-    if (type === 'opening') tryRecord({ type, start: 0, end: snap.t }, '片头结束', snap.duration);
-    else tryRecord({ type, start: snap.t, end: -1 }, '片尾开始', snap.duration);
+    if (type === 'opening') tryRecord({ type, start: 0, end: snap.t }, t('片头结束'), snap.duration);
+    else tryRecord({ type, start: snap.t, end: -1 }, t('片尾开始'), snap.duration);
   };
 
   const markMiddleStart = () => {
     const snap = pauseAndSnap();
     if (!snap) return;
     if (snap.t <= 0) {
-      toast('请先播放到片段起点', 'warning');
+      toast(t('请先播放到片段起点'), 'warning');
       return;
     }
     onPendingStart(snap.t);
-    toast(`已暂停并记录起点 ${formatTime(snap.t)}，播放到终点后点「标记中段终点」`, 'info');
+    toast(t('已暂停并记录起点 {time}，播放到终点后点「标记中段终点」', { time: formatTime(snap.t) }), 'info');
   };
 
   const markMiddleEnd = () => {
@@ -163,10 +167,10 @@ export function SkipMarkPanel({
     const snap = pauseAndSnap();
     if (!snap) return;
     if (snap.t <= pendingStart) {
-      toast('终点需晚于起点', 'warning');
+      toast(t('终点需晚于起点'), 'warning');
       return;
     }
-    if (tryRecord({ type: 'middle', start: pendingStart, end: snap.t }, '中段片段', snap.duration)) {
+    if (tryRecord({ type: 'middle', start: pendingStart, end: snap.t }, t('中段片段'), snap.duration)) {
       onPendingStart(null);
     }
   };
@@ -177,9 +181,9 @@ export function SkipMarkPanel({
     const wasDisabled = mark?.enabled === false;
     write(segments.filter((_, i) => i !== index));
     // 删除可撤销：误删后不必再拖回原位置重标
-    toast(`已删除${SEGMENT_LABELS[seg.type]}片段`, 'info', {
+    toast(t('已删除{segment}片段', { segment: t(SEGMENT_LABELS[seg.type]) }), 'info', {
       action: {
-        label: '撤销',
+        label: t('撤销'),
         onClick: () => {
           setSkipMark(markKey, segments);
           if (wasDisabled) setSkipMarkEnabled(markKey, false);
@@ -201,7 +205,7 @@ export function SkipMarkPanel({
     const others = segments.filter((_, i) => i !== index);
     const error = validateSegment(changed, clockNow?.duration ?? 0, others);
     if (error) {
-      toast(error, 'error');
+      toast(t(error), 'error');
       return;
     }
     write(segments.map((s, i) => (i === index ? changed : s)));
@@ -211,7 +215,7 @@ export function SkipMarkPanel({
   const jump = (seg: SkipSegment, to: 'start' | 'end') => {
     const c = getPlayerClock();
     if (!c) {
-      toast('播放器尚未就绪，请稍后再试', 'warning');
+      toast(t('播放器尚未就绪，请稍后再试'), 'warning');
       return;
     }
     c.pause();
@@ -232,42 +236,42 @@ export function SkipMarkPanel({
     <Drawer
       open={open}
       onClose={onClose}
-      title="跳过标记"
+      title={t('跳过标记')}
       width="max-w-sm lg:max-w-[20rem]"
       modal={false}
       mobileSheet
       panelStyle={mobileMaxHeight ? { maxHeight: mobileMaxHeight } : undefined}
       footer={
         <div>
-          <p className="mb-1.5 text-[11px] text-muted">记录（会先暂停在当前画面）</p>
+          <p className="mb-1.5 text-[11px] text-muted">{t('记录（会先暂停在当前画面）')}</p>
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               className="btn-ghost btn-sm"
-              title="把当前画面记为片头结束位置"
+              title={t('把当前画面记为片头结束位置')}
               onClick={() => recordAt('opening')}
             >
-              记为片头结束
+              {t('记为片头结束')}
             </button>
             <button
               type="button"
               className="btn-ghost btn-sm"
-              title="把当前画面记为片尾开始位置"
+              title={t('把当前画面记为片尾开始位置')}
               onClick={() => recordAt('ending')}
             >
-              记为片尾开始
+              {t('记为片尾开始')}
             </button>
             {pendingStart === null ? (
               <button type="button" className="btn-ghost btn-sm" onClick={markMiddleStart}>
-                标记中段起点
+                {t('标记中段起点')}
               </button>
             ) : (
               <>
                 <button type="button" className="btn-ghost btn-sm" onClick={markMiddleEnd}>
-                  标记中段终点（自 {formatTime(pendingStart)}）
+                  {t('标记中段终点（自 {time}）', { time: formatTime(pendingStart) })}
                 </button>
-                <button type="button" className="btn-ghost btn-sm" title="放弃这个起点" onClick={() => onPendingStart(null)}>
-                  取消
+                <button type="button" className="btn-ghost btn-sm" title={t('放弃这个起点')} onClick={() => onPendingStart(null)}>
+                  {t('取消')}
                 </button>
               </>
             )}
@@ -279,13 +283,13 @@ export function SkipMarkPanel({
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-xs text-muted">
-            当前{' '}
+            {t('当前')}{' '}
             <span className="font-mono text-content">{formatTime(clock.current)}</span>
             <span className="text-muted"> / {formatTime(clock.duration)}</span>
-            {clock.paused && <span className="ml-1 text-muted">· 已暂停</span>}
+            {clock.paused && <span className="ml-1 text-muted">{t('· 已暂停')}</span>}
           </p>
           <p className="mt-1 text-[11px] text-muted">
-            已标记 {segments.length} 段 · 按剧名对本剧各集与同名资源生效
+            {t('已标记 {count} 段 · 按剧名对本剧各集与同名资源生效', { count: segments.length })}
           </p>
         </div>
         <label
@@ -293,7 +297,7 @@ export function SkipMarkPanel({
             'flex shrink-0 items-center gap-1.5 text-xs',
             mark ? 'cursor-pointer text-muted hover:text-content' : 'cursor-not-allowed text-faint'
           )}
-          title={mark ? '关闭后保留标记但完全不生效' : '还没有可开关的标记'}
+          title={mark ? t('关闭后保留标记但完全不生效') : t('还没有可开关的标记')}
         >
           <input
             type="checkbox"
@@ -302,14 +306,13 @@ export function SkipMarkPanel({
             disabled={!mark}
             onChange={(e) => setSkipMarkEnabled(markKey, e.target.checked)}
           />
-          本剧跳过
+          {t('本剧跳过')}
         </label>
       </div>
 
       {segments.length === 0 ? (
         <p className="mt-3 rounded-lg border border-dashed border-line px-3 py-3 text-xs leading-relaxed text-muted">
-          尚未标记跳过片段。播放到目标位置后，用下方按钮记录，或使用快捷键：
-          Shift+I 片头结束 / Shift+O 片尾开始 / Shift+S · Shift+E 中段区间。
+          {t('尚未标记跳过片段。播放到目标位置后，用下方按钮记录，或使用快捷键： Shift+I 片头结束 / Shift+O 片尾开始 / Shift+S · Shift+E 中段区间。')}
         </p>
       ) : (
         <ul className="mt-3 space-y-2">
@@ -319,8 +322,8 @@ export function SkipMarkPanel({
             const sameTypeCount = segments.filter((s) => s.type === seg.type).length;
             const label =
               seg.type === 'middle' && sameTypeCount > 1
-                ? `${SEGMENT_LABELS.middle}${segments.slice(0, i).filter((s) => s.type === 'middle').length + 1}`
-                : SEGMENT_LABELS[seg.type];
+                ? `${t(SEGMENT_LABELS.middle)}${segments.slice(0, i).filter((s) => s.type === 'middle').length + 1}`
+                : t(SEGMENT_LABELS[seg.type]);
             return (
               <li
                 key={`${seg.type}:${seg.start}`}
@@ -338,34 +341,34 @@ export function SkipMarkPanel({
                     />
                     <span className="text-muted">[{label}]</span>
                     <span className="font-mono text-muted">
-                      {formatTime(seg.start)} → {seg.type === 'ending' ? '结尾' : formatTime(seg.end)}
+                      {formatTime(seg.start)} → {seg.type === 'ending' ? t('结尾') : formatTime(seg.end)}
                     </span>
                   </span>
-                  {isCurrent && <span className="shrink-0 text-[10px] text-accent">当前</span>}
+                  {isCurrent && <span className="shrink-0 text-[10px] text-accent">{t('当前')}</span>}
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1">
                   <button
                     type="button"
                     className="btn-ghost btn-sm"
-                    title="跳到片段起点，验证起点是否准确"
+                    title={t('跳到片段起点，验证起点是否准确')}
                     onClick={() => jump(seg, 'start')}
                   >
-                    起点
+                    {t('起点')}
                   </button>
                   {seg.type !== 'ending' && (
                     <button
                       type="button"
                       className="btn-ghost btn-sm"
-                      title="跳到终点前 1 秒，验证是否会切掉正片或漏掉一段"
+                      title={t('跳到终点前 1 秒，验证是否会切掉正片或漏掉一段')}
                       onClick={() => jump(seg, 'end')}
                     >
-                      终点
+                      {t('终点')}
                     </button>
                   )}
-                  <button type="button" className="btn-ghost btn-sm" title="边界提前 1 秒" onClick={() => nudge(i, -1)}>
+                  <button type="button" className="btn-ghost btn-sm" title={t('边界提前 1 秒')} onClick={() => nudge(i, -1)}>
                     -1s
                   </button>
-                  <button type="button" className="btn-ghost btn-sm" title="边界推后 1 秒" onClick={() => nudge(i, 1)}>
+                  <button type="button" className="btn-ghost btn-sm" title={t('边界推后 1 秒')} onClick={() => nudge(i, 1)}>
                     +1s
                   </button>
                 </div>
@@ -373,8 +376,8 @@ export function SkipMarkPanel({
                 <button
                   type="button"
                   className="absolute right-0.5 top-0.5 rounded-md p-1.5 text-muted transition-colors hover:bg-hover hover:text-danger"
-                  title="删除（可在提示中撤销）"
-                  aria-label={`删除${label}片段`}
+                  title={t('删除（可在提示中撤销）')}
+                  aria-label={t('删除{label}片段', { label })}
                   onClick={() => remove(i)}
                 >
                   <Icon name="close" className="h-3.5 w-3.5" />
@@ -388,32 +391,32 @@ export function SkipMarkPanel({
       {/* 全局开关：只读展示（层级与本剧开关不同，改起来去设置里更不容易误解） */}
       <div className="mt-3 rounded-lg border border-line bg-surface px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-muted">全局 · 自动跳过片段</span>
+          <span className="text-xs text-muted">{t('全局 · 自动跳过片段')}</span>
           <span className={cn('text-xs font-medium', autoSkipSegments ? 'text-accent' : 'text-muted')}>
-            {autoSkipSegments ? '已开启' : '已关闭'}
+            {autoSkipSegments ? t('已开启') : t('已关闭')}
           </span>
         </div>
         <p className="mt-1 text-[11px] leading-relaxed text-muted">
           {autoSkipSegments
-            ? '命中片头/中段自动跳段，片尾结束本集（是否连播看「自动连播」）。'
-            : '命中片段只显示按钮，不自动跳。'}
-          影响所有剧，在「设置 → 偏好设置」修改。
+            ? t('命中片头/中段自动跳段，片尾结束本集（是否连播看「自动连播」）。')
+            : t('命中片段只显示按钮，不自动跳。')}
+          {t('影响所有剧，在「设置 → 偏好设置」修改。')}
         </p>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
-        <span>进度条色带：</span>
-        {SEGMENT_TYPES.map((t) => (
-          <span key={t} className="inline-flex items-center gap-1">
+        <span>{t('进度条色带：')}</span>
+        {SEGMENT_TYPES.map((type) => (
+          <span key={type} className="inline-flex items-center gap-1">
             <span
               aria-hidden
               className="inline-block h-2 w-2 rounded-sm"
-              style={{ backgroundColor: SEGMENT_COLORS[t] }}
+              style={{ backgroundColor: SEGMENT_COLORS[type] }}
             />
-            {SEGMENT_LABELS[t]}
+            {t(SEGMENT_LABELS[type])}
           </span>
         ))}
-        <span className="w-full">跳过时播放器顶部会出现「撤销」，可回退刚跳过的那一次。</span>
+        <span className="w-full">{t('跳过时播放器顶部会出现「撤销」，可回退刚跳过的那一次。')}</span>
       </div>
     </Drawer>
   );

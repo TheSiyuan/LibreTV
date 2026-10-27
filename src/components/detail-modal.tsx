@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as t } from '@/lib/i18n';
+
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client-api';
@@ -22,6 +25,7 @@ import { Icon } from './icon';
  */
 
 export function DetailModal({ item, onClose }: { item: SearchResultItem | null; onClose: () => void }) {
+  useI18n();
   const store = useAppStore();
   const router = useRouter();
   const { toast } = useToast();
@@ -110,19 +114,22 @@ export function DetailModal({ item, onClose }: { item: SearchResultItem | null; 
   const copyLinks = async () => {
     if (!detail) return;
     const ok = await copyToClipboard(detail.episodes.join('\n'));
-    if (ok) toast('播放链接已复制', 'success');
-    else toast('复制失败，请检查浏览器权限', 'error');
+    if (ok) toast(t("播放链接已复制"), 'success');
+    else toast(t("复制失败，请检查浏览器权限"), 'error');
   };
 
   // 备注与卡片同源，同样归一化，避免同一部剧在两处显示不同文案
-  const remarks = formatRemarks(info?.remarks);
+  const normalizedRemarks = formatRemarks(info?.remarks);
+  const remarks = normalizedRemarks && /^(?:(?:全|更新至)\d+集|已完结)$/.test(normalizedRemarks)
+    ? t(normalizedRemarks)
+    : normalizedRemarks;
   const metaRows = [
-    info?.typeName && ['类型', info.typeName],
-    info?.year && ['年份', info.year],
-    info?.area && ['地区', info.area],
-    info?.director && ['导演', info.director],
-    info?.actor && ['主演', info.actor],
-    remarks && ['备注', remarks],
+    info?.typeName && [t("类型"), info.typeName],
+    info?.year && [t("年份"), info.year],
+    info?.area && [t("地区"), info.area],
+    info?.director && [t("导演"), info.director],
+    info?.actor && [t("主演"), info.actor],
+    remarks && [t("备注"), remarks],
   ].filter(Boolean) as [string, string][];
 
   return (
@@ -138,7 +145,7 @@ export function DetailModal({ item, onClose }: { item: SearchResultItem | null; 
         className="bg-surface-raised rounded-xl w-full max-w-3xl shadow-2xl animate-slide-up outline-none"
         role="dialog"
         aria-modal="true"
-        aria-label={`${item.name} 详情`}
+        aria-label={t('{name} 详情', { name: item.name })}
       >
         <div className="flex items-start justify-between gap-4 p-5 pb-3 border-b border-line">
           <div className="min-w-0">
@@ -148,7 +155,7 @@ export function DetailModal({ item, onClose }: { item: SearchResultItem | null; 
           <button
             className="p-1.5 rounded-md text-muted hover:text-content hover:bg-hover shrink-0"
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t("关闭")}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -157,9 +164,9 @@ export function DetailModal({ item, onClose }: { item: SearchResultItem | null; 
         </div>
 
         <div className="p-5 pt-4">
-          {loading && <LoadingState label="正在获取剧集信息..." />}
+          {loading && <LoadingState label={t("正在获取剧集信息...")} />}
 
-          {!loading && error && <ErrorState message={error || '获取失败'} />}
+          {!loading && error && <ErrorState message={t(error || "获取失败")} />}
 
           {!loading && !error && detail && (
             <>
@@ -199,19 +206,19 @@ export function DetailModal({ item, onClose }: { item: SearchResultItem | null; 
                       <button
                         className="btn-ghost btn-sm"
                         onClick={() => setReversed((v) => !v)}
-                        aria-label={reversed ? '切换为正序排列' : '切换为倒序排列'}
-                        title="调整剧集列表的排列顺序"
+                        aria-label={reversed ? t("切换为正序排列") : t("切换为倒序排列")}
+                        title={t("调整剧集列表的排列顺序")}
                       >
                         <Icon
                           name="arrowDown"
                           className={cn('w-3.5 h-3.5 transition-transform', reversed && 'rotate-180')}
                         />
-                        {reversed ? '正序排列' : '倒序排列'}
+                        {reversed ? t("正序排列") : t("倒序排列")}
                       </button>
-                      <span className="text-sm text-faint">共 {episodes.length} 集</span>
+                      <span className="text-sm text-faint">{t('共 {count} 集', { count: episodes.length })}</span>
                     </div>
                     <button className="btn-primary btn-sm" onClick={copyLinks}>
-                      复制链接
+                      {t("复制链接")}
                     </button>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-2 max-h-[40vh] overflow-y-auto scrollbar-thin pr-1">
@@ -232,8 +239,8 @@ export function DetailModal({ item, onClose }: { item: SearchResultItem | null; 
               ) : (
                 <EmptyState
                   icon="alert"
-                  title="未找到播放资源"
-                  description="该视频可能暂时无法播放，请尝试其他视频"
+                  title={t("未找到播放资源")}
+                  description={t("该视频可能暂时无法播放，请尝试其他视频")}
                 />
               )}
             </>

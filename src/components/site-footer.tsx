@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as tr } from '@/lib/i18n';
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth';
 
@@ -69,14 +72,15 @@ function useUpstreamUpdate(current: string | null): UpstreamUpdate | null {
 
 /** 页脚仓库链接上的悬停提示：显示更新检测结果 */
 function UpdateTip({ update }: { update: UpstreamUpdate | null }) {
+  useI18n();
   const tip =
     update === null
       ? null
       : update.status === 'newer'
-        ? `发现新版本 v${update.latest}`
+        ? tr('发现新版本 v{version}', { version: update.latest ?? '' })
         : update.status === 'latest'
-          ? '已是最新版本'
-          : '正在检测更新…';
+          ? tr('已是最新版本')
+          : tr('正在检测更新…');
   if (!tip) return null;
   return (
     <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-chip px-2 py-1 text-faint shadow-sm group-hover:block">

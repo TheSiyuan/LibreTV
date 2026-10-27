@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n, LocaleSwitch } from '@/components/locale';
+import { translate as tr } from '@/lib/i18n';
+
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Icon } from './icon';
@@ -62,6 +65,7 @@ export function Drawer({
    */
   mobileSheet?: boolean;
 }) {
+  useI18n();
   const [mounted, setMounted] = useState(open);
   const [entered, setEntered] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -171,7 +175,7 @@ export function Drawer({
         ref={panelRef}
         role="dialog"
         aria-modal={modal || undefined}
-        aria-label={title}
+        aria-label={tr(title)}
         tabIndex={-1}
         className={cn(
           'absolute right-0 top-0 h-full w-full bg-surface-raised border-l border-line flex flex-col outline-none',
@@ -188,11 +192,12 @@ export function Drawer({
         style={panelStyle}
       >
         <div className="shrink-0 px-4 py-2.5 border-b border-line flex items-center justify-between">
-          <h2 className="font-semibold text-content">{title}</h2>
+          <h2 className="font-semibold text-content min-w-0 mr-auto">{tr(title)}</h2>
+          <LocaleSwitch />
           <button
             className="p-1.5 rounded-md text-muted hover:text-content hover:bg-hover transition-colors"
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={tr('关闭')}
           >
             <Icon name="close" />
           </button>

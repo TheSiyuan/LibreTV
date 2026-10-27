@@ -1,5 +1,9 @@
 'use client';
 
+import { useI18n, LocaleSwitch } from '@/components/locale';
+import { translate as tr, restoreLocale } from '@/lib/i18n';
+import { useEffect } from 'react';
+
 /**
  * 根布局级错误兜底：layout 本身崩溃时启用，必须自带 <html>/<body>。
  * 此时主题脚本等均已失效，用内联样式保证基本可读。
@@ -11,8 +15,10 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { locale } = useI18n();
+  useEffect(restoreLocale, []);
   return (
-    <html lang="zh-CN">
+    <html lang={locale}>
       <body
         style={{
           margin: 0,
@@ -29,7 +35,8 @@ export default function GlobalError({
           padding: 16,
         }}
       >
-        <p style={{ margin: 0, fontSize: 14 }}>应用发生严重错误，请刷新页面重试。</p>
+        <LocaleSwitch />
+        <p style={{ margin: 0, fontSize: 14 }}>{tr('应用发生严重错误，请刷新页面重试。')}</p>
         <button
           onClick={reset}
           style={{
@@ -41,11 +48,11 @@ export default function GlobalError({
             cursor: 'pointer',
           }}
         >
-          刷新
+          {tr('刷新')}
         </button>
         {/* digest 用于线上日志定位，不含敏感信息，展示无妨 */}
         {error.digest && (
-          <p style={{ margin: 0, fontSize: 11, color: '#7a8ca6' }}>错误编号：{error.digest}</p>
+          <p style={{ margin: 0, fontSize: 11, color: '#7a8ca6' }}>{tr('错误编号：')}{error.digest}</p>
         )}
       </body>
     </html>

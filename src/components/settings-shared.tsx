@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as tr } from '@/lib/i18n';
+
 import { useCallback, useState, type ReactNode } from 'react';
 import { cn, formatDisableTtl } from '@/lib/utils';
 import { isInDisabledSubscription, useAppStore } from '@/lib/store';
@@ -48,11 +51,12 @@ export function useSourceTests() {
 }
 
 export function SectionTitle({ title, hint, extra }: { title: string; hint?: string; extra?: ReactNode }) {
+  useI18n();
   return (
     <div className="flex items-center justify-between gap-2 mb-2.5">
       <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-content">{title}</h3>
-        {hint && <p className="text-[11px] text-faint truncate">{hint}</p>}
+        <h3 className="text-sm font-semibold text-content">{tr(title)}</h3>
+        {hint && <p className="text-[11px] text-faint truncate">{tr(hint)}</p>}
       </div>
       {extra}
     </div>
@@ -70,11 +74,12 @@ export function ToggleRow({
   checked: boolean;
   onChange: (v: boolean) => void;
 }) {
+  useI18n();
   return (
     <div className="flex items-center justify-between gap-4 py-0.5">
       <div className="min-w-0">
-        <div className="text-sm text-content">{label}</div>
-        <div className="text-xs text-faint">{description}</div>
+        <div className="text-sm text-content">{tr(label)}</div>
+        <div className="text-xs text-faint">{tr(description)}</div>
       </div>
       <Switch checked={checked} onChange={onChange} label={label} />
     </div>
@@ -93,12 +98,13 @@ export function Switch({
   label: string;
   title?: string;
 }) {
+  useI18n();
   return (
     <button
       role="switch"
       aria-checked={checked}
-      aria-label={label}
-      title={title ?? label}
+      aria-label={tr(label)}
+      title={tr(title ?? label)}
       className={cn(
         'relative h-[22px] w-10 shrink-0 rounded-full transition-colors duration-200',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40',
@@ -135,17 +141,18 @@ export function SelectRow({
   /** 当前选中项的说明文案，随选中项变化 */
   description?: string;
 }) {
+  useI18n();
   return (
     <div className="flex items-center justify-between gap-4 py-0.5">
       <div className="min-w-0">
-        <div className="text-sm text-content">{label}</div>
-        {description && <div className="text-xs text-faint">{description}</div>}
+        <div className="text-sm text-content">{tr(label)}</div>
+        {description && <div className="text-xs text-faint">{tr(description)}</div>}
       </div>
       <Dropdown
         value={value}
         onChange={onChange}
-        options={options}
-        ariaLabel={label}
+        options={options.map((option) => ({ ...option, label: tr(option.label), hint: option.hint ? tr(option.hint) : undefined }))}
+        ariaLabel={tr(label)}
         className="shrink-0 [&>button]:!py-1.5 [&>button]:!pl-2.5 [&>button]:!pr-2 [&>button]:text-xs"
       />
     </div>
@@ -161,6 +168,7 @@ export function SearchInput({
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  useI18n();
   return (
     <div className="relative">
       <Icon
@@ -169,10 +177,10 @@ export function SearchInput({
       />
       <input
         className="input w-full !pl-8 !py-1.5 text-xs"
-        aria-label={placeholder ?? '搜索'}
+        aria-label={placeholder ? tr(placeholder) : tr('搜索')}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
+        placeholder={placeholder ? tr(placeholder) : undefined}
       />
     </div>
   );
@@ -190,6 +198,7 @@ export function TestBadge({
   title: string;
   badgeWhenOk: (t: { ms?: number; count?: number }) => string;
 }) {
+  useI18n();
   return (
     <span className="flex items-center gap-1 shrink-0">
       {state?.status === 'done' && (
@@ -198,9 +207,9 @@ export function TestBadge({
             'text-[10px] px-1.5 py-0.5 rounded',
             state.ok ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger'
           )}
-          title={state.ok ? `${state.ms}ms` : state.error}
+          title={state.ok ? `${state.ms}ms` : state.error ? tr(state.error) : undefined}
         >
-          {state.ok ? badgeWhenOk({ ms: state.ms, count: state.count }) : `✗ ${state.error?.slice(0, 12) || '失败'}`}
+          {state.ok ? badgeWhenOk({ ms: state.ms, count: state.count }) : `✗ ${(state.error ? tr(state.error) : '').slice(0, 24) || tr('失败')}`}
         </span>
       )}
       <button
@@ -210,8 +219,8 @@ export function TestBadge({
         )}
         disabled={state?.status === 'loading'}
         onClick={onTest}
-        aria-label={title}
-        title={title}
+        aria-label={tr(title)}
+        title={tr(title)}
       >
         {state?.status === 'loading' ? <Spinner size="sm" /> : <Icon name="bolt" className="w-4 h-4" />}
       </button>
@@ -221,6 +230,7 @@ export function TestBadge({
 
 /** 点播源搜索健康度徽章（随搜索/批量测活滚动更新）；被自动停用的源提供手动恢复入口 */
 export function HealthBadge({ sourceKey }: { sourceKey: string }) {
+  useI18n();
   const entry = useAppStore((s) => s.sourceHealth[sourceKey]);
   const inDisabledSub = useAppStore((s) => isInDisabledSubscription(s, sourceKey));
   const { toast } = useToast();
@@ -230,10 +240,8 @@ export function HealthBadge({ sourceKey }: { sourceKey: string }) {
     return (
       <span
         className="text-[10px] px-1.5 py-0.5 rounded bg-warning/15 text-warning shrink-0"
-        title="所属订阅已被停用，该源暂不参与搜索；到「数据源订阅」重新启用即可"
-      >
-        订阅已停用
-      </span>
+        title={tr("所属订阅已被停用，该源暂不参与搜索；到「数据源订阅」重新启用即可")}
+      >{tr("订阅已停用")}</span>
     );
   }
 
@@ -253,31 +261,29 @@ export function HealthBadge({ sourceKey }: { sourceKey: string }) {
           )}
           title={
             permanent
-              ? `已第 ${entry.disableCount} 次被自动停用，暂停参与搜索；点「恢复」重新启用`
-              : `连续 ${entry.failStreak} 次超时/失败，${remainText}后自动恢复`
+              ? tr("已第 {count} 次被自动停用，暂停参与搜索；点「恢复」重新启用", { count: entry.disableCount ?? 0 })
+              : tr("连续 {count} 次超时/失败，{time}后自动恢复", { count: entry.failStreak, time: remainText })
           }
         >
           <Icon name="clock" className="w-3 h-3" />
-          {permanent ? '已停用' : remainText}
+          {permanent ? tr('已停用') : remainText}
         </span>
         <button
           className="text-[10px] px-1.5 py-0.5 rounded text-muted hover:text-accent hover:bg-hover transition-colors"
-          aria-label="恢复此源"
-          title="清除健康度记录，立即恢复参与搜索"
+          aria-label={tr("恢复此源")}
+          title={tr("清除健康度记录，立即恢复参与搜索")}
           onClick={() => {
             useAppStore.getState().clearSourceHealth(sourceKey);
-            toast('已恢复，下次搜索重新参与', 'success');
+            toast(tr('已恢复，下次搜索重新参与'), 'success');
           }}
-        >
-          恢复
-        </button>
+        >{tr("恢复")}</button>
       </span>
     );
   }
 
   if (entry.ok) {
     return (
-      <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success shrink-0" title={`上次搜索 ${entry.ms}ms`}>
+      <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success shrink-0" title={tr("上次搜索 {ms}ms", { ms: entry.ms ?? 0 })}>
         ✓ {entry.ms}ms
       </span>
     );
@@ -288,9 +294,9 @@ export function HealthBadge({ sourceKey }: { sourceKey: string }) {
         'text-[10px] px-1.5 py-0.5 rounded shrink-0',
         entry.timedOut ? 'bg-warning/15 text-warning' : 'bg-danger/15 text-danger'
       )}
-      title={entry.error}
+      title={entry.error ? tr(entry.error) : undefined}
     >
-      连续 {entry.failStreak} 次失败
+      {tr("连续 {count} 次失败", { count: entry.failStreak })}
     </span>
   );
 }

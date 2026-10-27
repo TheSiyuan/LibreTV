@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as tr } from '@/lib/i18n';
+
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Icon, type IconName } from './icon';
@@ -41,10 +44,11 @@ export function Spinner({
 
 /** 加载中：spinner + 可选文案（替代各处「纯文字 加载中...」） */
 export function LoadingState({ label, className }: { label?: string; className?: string }) {
+  useI18n();
   return (
     <div className={cn('flex flex-col items-center justify-center gap-3 py-10', className)}>
       <Spinner size="md" />
-      {label && <p className="text-sm text-muted">{label}</p>}
+      {label && <p className="text-sm text-muted">{tr(label)}</p>}
     </div>
   );
 }
@@ -65,14 +69,15 @@ export function EmptyState({
   variant?: 'boxed' | 'plain';
   className?: string;
 }) {
+  useI18n();
   if (variant === 'plain') {
-    return <p className={cn('text-center text-xs text-faint py-6', className)}>{title}</p>;
+    return <p className={cn('text-center text-xs text-faint py-6', className)}>{tr(title)}</p>;
   }
   return (
     <div className={cn('border border-dashed border-line rounded-lg p-6 text-center', className)}>
       <Icon name={icon} className="w-6 h-6 mx-auto text-faint mb-2" />
-      <p className="text-sm text-muted">{title}</p>
-      {description && <p className="text-xs text-faint mt-1 leading-relaxed">{description}</p>}
+      <p className="text-sm text-muted">{tr(title)}</p>
+      {description && <p className="text-xs text-faint mt-1 leading-relaxed">{tr(description)}</p>}
       {action && <div className="mt-3 flex items-center justify-center gap-2">{action}</div>}
     </div>
   );
@@ -91,18 +96,19 @@ export function ErrorState({
   tone?: 'default' | 'onDark';
   className?: string;
 }) {
+  useI18n();
   return (
     <div className={cn('flex flex-col items-center justify-center gap-3 py-8 text-center', className)}>
       <Icon name="alert" className={cn('w-6 h-6', tone === 'onDark' ? 'text-white/80' : 'text-danger')} />
       <p className={cn('text-sm break-words max-w-md', tone === 'onDark' ? 'text-white/80' : 'text-muted')}>
-        {message}
+        {tr(message)}
       </p>
       {onRetry && (
         <button
           className={cn('btn-ghost btn-sm', tone === 'onDark' && '!bg-white/10 !text-white !border-white/20')}
           onClick={onRetry}
         >
-          {retryLabel}
+          {tr(retryLabel)}
         </button>
       )}
     </div>

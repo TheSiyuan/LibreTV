@@ -2,9 +2,10 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'LibreTV - 免费在线视频搜索与观看平台',
+    name: 'LibreTV - Free online video search and viewing',
     short_name: 'LibreTV',
-    description: '免费在线视频搜索与观看平台',
+    description: 'Free online video search and viewing',
+    lang: 'en',
     start_url: '/',
     display: 'standalone',
     background_color: '#111111',

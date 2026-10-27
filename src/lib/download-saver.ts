@@ -8,6 +8,8 @@
  * 复杂度高、收益边际——大文件场景建议直接使用 FS Access 浏览器。
  */
 
+import { translate } from './i18n';
+
 export interface SaveTarget {
   /** 'fs' = 磁盘直写；'memory' = 内存聚合 */
   kind: 'fs' | 'memory';
@@ -53,7 +55,7 @@ function memoryTarget(filename: string, confirmOverBytes = 500 * 1024 * 1024): S
       if (done) return;
       bytes += data.byteLength;
       if (bytes > confirmOverBytes && bytes - data.byteLength <= confirmOverBytes) {
-        if (!window.confirm(`下载体积已超过 ${Math.round(confirmOverBytes / 1024 / 1024)}MB，继续将暂存在内存中，可能导致页面卡顿。是否继续？`)) {
+        if (!window.confirm(translate('下载体积已超过 {size}MB，继续将暂存在内存中，可能导致页面卡顿。是否继续？', { size: Math.round(confirmOverBytes / 1024 / 1024) }))) {
           throw new Error('用户取消了下载（内存超限）');
         }
       }
@@ -110,7 +112,7 @@ export async function pickSaveTarget(filename: string, estimatedBytes?: number):
     }
   }
   if (estimatedBytes && estimatedBytes > 500 * 1024 * 1024) {
-    if (!window.confirm('该视频体积较大（未提供磁盘直写能力的环境），将暂存在内存中，可能导致页面卡顿。是否继续？')) {
+    if (!window.confirm(translate('该视频体积较大（未提供磁盘直写能力的环境），将暂存在内存中，可能导致页面卡顿。是否继续？'))) {
       throw new UserCancelledError();
     }
   }

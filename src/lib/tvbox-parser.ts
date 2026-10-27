@@ -364,20 +364,23 @@ export function withSkipped(
  */
 export function describeParseStats(
   stats: SubscriptionParseStats | undefined,
-  options?: { includeSamples?: boolean }
+  options?: { includeSamples?: boolean; localize?: (message: string) => string }
 ): string {
   if (!stats) return '';
   const parts: string[] = [];
   if (stats.skipped > 0) {
-    parts.push(`跳过 ${stats.skipped} 个不可用条目（${describeReasons(stats.skippedByReason)}）`);
+    const message = `跳过 ${stats.skipped} 个不可用条目（${describeReasons(stats.skippedByReason)}）`;
+    parts.push(options?.localize ? options.localize(message) : message);
   }
   if (options?.includeSamples !== false && stats.skippedSamples && stats.skippedSamples.length > 0) {
-    parts.push(`如「${stats.skippedSamples.join('」「')}」`);
+    const message = `如「${stats.skippedSamples.join('」「')}」`;
+    parts.push(options?.localize ? options.localize(message) : message);
   }
   if (stats.truncated > 0) {
-    parts.push(`超出上限截断 ${stats.truncated} 条`);
+    const message = `超出上限截断 ${stats.truncated} 条`;
+    parts.push(options?.localize ? options.localize(message) : message);
   }
-  return parts.join('，');
+  return parts.join(options?.localize ? ', ' : '，');
 }
 
 /** 收集点播源：只接受 Apple CMS 直连接口 */

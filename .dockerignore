@@ -14,9 +14,14 @@ tsconfig.tsbuildinfo
 .env*.local
 *.log
 
+# Local release archives and browser review artifacts
+.release
+.taste-skill
+
 # 文档与编排文件（不参与镜像构建）
 Dockerfile
 docker-compose.yml
 docs
 README.md
+TODO.md
 LICENSE

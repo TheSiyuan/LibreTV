@@ -9,6 +9,7 @@ import { GlobalDownloadManager } from './download-manager';
 import { useAppStore, hydrateLiveProbeResults } from '@/lib/store';
 import { api, STATUS_QUERY_KEY } from '@/lib/client-api';
 import { applyEnvPresets } from '@/lib/subscription-sync';
+import { LocaleProvider } from './locale';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -45,14 +46,16 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <ToastProvider>
+      <LocaleProvider>
+        <ThemeProvider>
+          <ToastProvider>
           {/* 全站常驻：下载事件监听（enqueueDownload）依赖它存在——
               挂在 Header 里会让 /watch 等不渲染 Header 的页面派发的事件凭空丢失 */}
-          <GlobalDownloadManager />
-          <AuthProvider>{children}</AuthProvider>
-        </ToastProvider>
-      </ThemeProvider>
+            <GlobalDownloadManager />
+            <AuthProvider>{children}</AuthProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </LocaleProvider>
     </QueryClientProvider>
   );
 }

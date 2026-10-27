@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as t } from '@/lib/i18n';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client-api';
@@ -49,6 +52,7 @@ export function SwitchSourceModal({
   currentIndex: number;
   onClose: () => void;
 }) {
+  useI18n();
   const store = useAppStore();
   const router = useRouter();
   const { toast } = useToast();
@@ -143,7 +147,7 @@ export function SwitchSourceModal({
         // 主动中止不算失败，不提示
         const aborted = err instanceof DOMException && err.name === 'AbortError';
         if (!cancelled && !aborted) {
-          toast(err instanceof Error ? err.message : '换源搜索失败', 'error');
+          toast(err instanceof Error ? t(err.message) : t('换源搜索失败'), 'error');
           setPhase('done');
         }
       }
@@ -242,7 +246,7 @@ export function SwitchSourceModal({
 
   const switchTo = (c: Candidate) => {
     if (!c.episodes) {
-      toast('该源无可用播放资源', 'warning');
+      toast(t('该源无可用播放资源'), 'warning');
       return;
     }
     const targetIndex = currentIndex < c.episodes ? currentIndex : 0;
@@ -272,7 +276,7 @@ export function SwitchSourceModal({
         className="bg-surface-raised rounded-t-2xl sm:rounded-xl w-full max-w-3xl shadow-2xl p-5 pb-[calc(1.25rem_+_env(safe-area-inset-bottom))] sm:pb-5 max-h-[92vh] sm:max-h-[85vh] flex flex-col overflow-hidden animate-slide-up outline-none"
         role="dialog"
         aria-modal="true"
-        aria-label={`换源：${currentTitle}`}
+        aria-label={t('换源：{title}', { title: currentTitle })}
       >
         <div className="sm:hidden mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-line" aria-hidden />
         {/* 标题固定在滚动区之外：比 sticky 更省事，也不会有背景覆盖不到 padding 的缝隙 */}
@@ -283,23 +287,23 @@ export function SwitchSourceModal({
             </h2>
             <p className="text-xs text-faint">
               {phase === 'searching'
-                ? '正在搜索各资源...'
+                ? t('正在搜索各资源...')
                 : phase === 'testing'
-                  ? '正在测试各资源速率...'
-                  : `共 ${sorted.length} 个来源 · ${sorted.filter((c) => c.ok).length} 个可用`}
+                  ? t('正在测试各资源速率...')
+                  : t('共 {count} 个来源 · {available} 个可用', { count: sorted.length, available: sorted.filter((c) => c.ok).length })}
             </p>
             {phase === 'done' && progress.total > 0 && (
               <p className="text-xs text-faint tabular-nums mt-0.5">
                 {progress.done < progress.total
-                  ? `画质探测中 ${progress.done}/${progress.total}`
+                  ? t('画质探测中 {done}/{total}', { done: progress.done, total: progress.total })
                   : progress.known > 0
-                    ? `画质已探到 ${progress.known}/${progress.total}`
+                    ? t('画质已探到 {known}/{total}', { known: progress.known, total: progress.total })
                     : // 一个都没探到不等于失败：多为单码率/直链，说清楚省得用户以为坏了
-                      '源站未提供画质'}
+                      t('源站未提供画质')}
               </p>
             )}
           </div>
-          <button className="p-1.5 rounded-md text-muted hover:text-content hover:bg-hover" onClick={onClose} aria-label="关闭">
+          <button className="p-1.5 rounded-md text-muted hover:text-content hover:bg-hover" onClick={onClose} aria-label={t('关闭')}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -309,9 +313,9 @@ export function SwitchSourceModal({
         {/* 内容区独占剩余高度并自己滚动：标题与拖拽条始终可见，不随内容滚走 */}
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
         {phase !== 'done' ? (
-          <LoadingState label={phase === 'searching' ? '搜索各资源中...' : '测速中...'} />
+          <LoadingState label={phase === 'searching' ? t('搜索各资源中...') : t('测速中...')} />
         ) : sorted.length === 0 ? (
-          <EmptyState variant="plain" title="其他点播源未找到同名资源" />
+          <EmptyState variant="plain" title={t('其他点播源未找到同名资源')} />
         ) : (
           <>
             {/* 横向 Tab：源多时比网格省纵向空间，手机上可直接滑动 */}
@@ -320,7 +324,7 @@ export function SwitchSourceModal({
                 ref={tabBarRef}
                 className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin"
                 role="tablist"
-                aria-label="选择播放源"
+                aria-label={t('选择播放源')}
               >
                 {sorted.map((c) => {
                   const isCurrent = isCurrentCandidate(c, currentSourceKey, currentVodId);
@@ -342,7 +346,7 @@ export function SwitchSourceModal({
                       onClick={() => setSelectedKey(key)}
                     >
                       <span className="max-w-[8rem] truncate font-medium">{c.source.name}</span>
-                      {isCurrent && <span className="text-[10px] opacity-80">当前</span>}
+                      {isCurrent && <span className="text-[10px] opacity-80">{t('当前')}</span>}
                       {qLabel && <span className="text-[10px] tabular-nums opacity-70">{qLabel}</span>}
                       {c.ok ? (
                         <span
@@ -353,7 +357,7 @@ export function SwitchSourceModal({
                           title={`${c.ms}ms`}
                         />
                       ) : (
-                        <span className="text-[10px] text-danger">失败</span>
+                        <span className="text-[10px] text-danger">{t('失败')}</span>
                       )}
                     </button>
                   );
@@ -400,38 +404,38 @@ export function SwitchSourceModal({
                       </h3>
                       <QualityBadge entry={qualities[qKey]} loading={probing[qKey]} onRetry={() => retry([c.result])} />
                       {isCurrent && (
-                        <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-accent/15 text-accent">播放中</span>
+                        <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-accent/15 text-accent">{t('播放中')}</span>
                       )}
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-2 sm:max-w-[16rem]">
                       <div className="rounded-md bg-chip px-2 py-1.5">
-                        <div className="text-[10px] text-faint">速度</div>
+                        <div className="text-[10px] text-faint">{t('速度')}</div>
                         <div
                           className={cn(
                             'text-xs font-medium tabular-nums',
                             !c.ok ? 'text-danger' : (c.ms ?? 0) > 2000 ? 'text-warning' : 'text-success'
                           )}
                         >
-                          {c.ok ? `${c.ms}ms` : '不可用'}
+                          {c.ok ? `${c.ms}ms` : t('不可用')}
                         </div>
                       </div>
                       <div className="rounded-md bg-chip px-2 py-1.5">
-                        <div className="text-[10px] text-faint">集数</div>
+                        <div className="text-[10px] text-faint">{t('集数')}</div>
                         <div className="text-xs font-medium text-content">
-                          {c.episodes ? `${c.episodes} 集` : '无资源'}
+                          {c.episodes ? t('{count} 集', { count: c.episodes }) : t('无资源')}
                         </div>
                       </div>
                     </div>
                     <div className="mt-2.5 flex flex-wrap items-center gap-2">
                       {isCurrent ? (
-                        <span className="text-xs text-accent">当前正在播放</span>
+                        <span className="text-xs text-accent">{t('当前正在播放')}</span>
                       ) : (
                         <>
                           <button type="button" className="btn-primary btn-sm" disabled={!c.episodes} onClick={() => switchTo(c)}>
-                            切换到此源
+                            {t('切换到此源')}
                           </button>
                           {/* 测速失败但拿得到集数：允许点。详情接口偶发超时很常见，别把能播的源挡在外面 */}
-                          {!c.ok && !!c.episodes && <span className="text-xs text-warning">测速未通过，仍可尝试</span>}
+                          {!c.ok && !!c.episodes && <span className="text-xs text-warning">{t('测速未通过，仍可尝试')}</span>}
                         </>
                       )}
                       {!c.ok && (
@@ -441,13 +445,13 @@ export function SwitchSourceModal({
                           disabled={retestingKey === key}
                           onClick={() => void retest(c)}
                         >
-                          {retestingKey === key ? '重测中...' : '重新测速'}
+                          {retestingKey === key ? t('重测中...') : t('重新测速')}
                         </button>
                       )}
                     </div>
                     {!c.ok && c.error && (
-                      <p className="mt-1 text-[11px] text-faint line-clamp-1" title={c.error}>
-                        {c.error}
+                      <p className="mt-1 text-[11px] text-faint line-clamp-1" title={t(c.error)}>
+                        {t(c.error)}
                       </p>
                     )}
                   </div>

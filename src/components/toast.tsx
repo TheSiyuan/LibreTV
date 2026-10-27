@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/locale';
+import { translate as tr } from '@/lib/i18n';
+
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +49,7 @@ const TYPE_STYLES: Record<ToastType, string> = {
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  useI18n();
   const [items, setItems] = useState<ToastItem[]>([]);
   const idRef = useRef(0);
   const timersRef = useRef(new Map<number, ReturnType<typeof setTimeout>>());
@@ -90,7 +94,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               TYPE_STYLES[t.type]
             )}
           >
-            <span>{t.message}</span>
+            <span>{tr(t.message)}</span>
             {t.action && (
               <button
                 className="shrink-0 font-medium underline underline-offset-2 hover:opacity-80 transition-opacity"
@@ -99,7 +103,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   t.action?.onClick();
                 }}
               >
-                {t.action.label}
+                {tr(t.action.label)}
               </button>
             )}
           </div>
